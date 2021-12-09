@@ -1,4 +1,4 @@
-name:
+name: Delivery Push to Evironment Repo
 
 on:
   workflow_call:
@@ -41,7 +41,7 @@ jobs:
       - name: Find Target Environment
         id: target_env
         run: |
-          ENV="${{ inputs.environment }}"
+          ENV="${{ steps.get_env.outputs.result }}"
           if [[ "$ENV" == "" ]] ; then
             ENV="staging"
           fi
@@ -54,7 +54,7 @@ jobs:
           payload="{\"promote\": {"
           payload="${payload}\"repositoryowner\": \"${{ steps.getowner.outputs.owner }}\""
           payload="${payload}, \"repository\": \"${{ steps.getowner.outputs.repo_name }}\""
-          payload="${payload}, \"environment\": \"${{ inputs.environment }}\""
+          payload="${payload}, \"environment\": \"${{ steps.get_env.outputs.result }}\""
           payload="${payload}, \"version\": \"${{ inputs.release_version }}\""
           payload="${payload}, \"releasename\": \"${{ steps.getowner.outputs.repo_name }}\""
           payload="${payload} } }"
@@ -67,7 +67,7 @@ jobs:
         uses: peter-evans/repository-dispatch@v1
         with:
           token: "${{ secrets.token }}"
-          repository: ${{ steps.getowner.outputs.owner }}/environment-${{ steps.getowner.outputs.owner }}-${{ inputs.environment }}
+          repository: ${{ steps.getowner.outputs.owner }}/environment-${{ steps.getowner.outputs.owner }}-${{ steps.get_env.outputs.result }}
           event-type: promote-environment
           client-payload: '${{ steps.params.outputs.payload }}'
 
