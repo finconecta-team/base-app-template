@@ -1,0 +1,73 @@
+name:
+
+on:
+  workflow_call:
+    inputs:
+      release_version:
+        required: true
+        type: string
+    secrets:
+      token:
+        required: true
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      # Proceed with checkout of source with all the references (depth=0)  
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.token }}
+          ref: v${{ inputs.release_version }}
+
+      # Get the owner repo
+      - name: Get owner
+        id: getowner
+        run: |
+          repo_owner=`echo "$GITHUB_REPOSITORY" | cut -f 1 -d "/"`
+          repo_name=`echo "$GITHUB_REPOSITORY" | cut -f 2 -d "/"`
+          echo "::set-output name=owner::$repo_owner"
+          echo "::set-output name=repo_name::$repo_name"
+
+      # Get pipeline conf
+      - name: Get pipeline target environment
+        id: get_env
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq eval '.cd.env' ./cloudopsworks-ci.yaml
+
+      # Environment Determination
+      - name: Find Target Environment
+        id: target_env
+        run: |
+          ENV="${{ inputs.environment }}"
+          if [[ "$ENV" == "" ]] ; then
+            ENV="staging"
+          fi
+          echo "::set-output name=result::$ENV"
+
+      # Build Payload script
+      - name: Build Payload params
+        id: params
+        run: |
+          payload="{\"promote\": {"
+          payload="${payload}\"repositoryowner\": \"${{ steps.getowner.outputs.owner }}\""
+          payload="${payload}, \"repository\": \"${{ steps.getowner.outputs.repo_name }}\""
+          payload="${payload}, \"environment\": \"${{ inputs.environment }}\""
+          payload="${payload}, \"version\": \"${{ inputs.release_version }}\""
+          payload="${payload}, \"releasename\": \"${{ steps.getowner.outputs.repo_name }}\""
+          payload="${payload} } }"
+
+          echo "::set-output name=payload::$payload"
+
+      # Send event to repository to launch new promotion
+      - name: Send Event to Environment Repository
+        id: send_event
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          token: "${{ secrets.token }}"
+          repository: ${{ steps.getowner.outputs.owner }}/environment-${{ steps.getowner.outputs.owner }}-${{ inputs.environment }}
+          event-type: promote-environment
+          client-payload: '${{ steps.params.outputs.payload }}'
+

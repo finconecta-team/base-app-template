@@ -1,0 +1,43 @@
+##
+# (c) 2021 - CloudopsWorks OÜ - https://docs.cloudops.works/
+#
+name: Chatops Agent
+on:
+  workflow_call:
+    secrets:
+      token:
+        required: true
+
+jobs:
+  command:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Slash Command Dispatch
+        if: ${{ !github.event.issue.pull_request }}
+        uses: peter-evans/slash-command-dispatch@v2
+        with:
+          token: ${{ secrets.token }}
+          commands: |
+            deploy
+            promote
+            rebuild
+          static-args: |
+            author=${{ github.actor }}
+            issue_number=${{ github.event.issue.number }}
+            issue_repository=${{ github.repository }}
+      - name: Slash Command Dispatch Pull-Request
+        if: ${{ github.event.issue.pull_request }}
+        uses: peter-evans/slash-command-dispatch@v2
+        with:
+          token: ${{ secrets.token }}
+          commands: |
+            approved
+            approve
+            lgtm
+            cancel
+            retry
+          static-args: |
+            author=${{ github.actor }}
+            pull_request=true
+            pull_request_number=${{ github.event.issue.number }}
+          
