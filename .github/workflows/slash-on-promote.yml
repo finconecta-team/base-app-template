@@ -56,15 +56,17 @@ jobs:
             payload="${payload} } }"
 
             echo "::set-output name=payload::$payload"
+            echo "::set-output name=result::OK"
             echo "payload=$payload"
           else
             echo "Promote command is incomplete please try again"
-            exit 100
+            echo "::set-output name=result::FAIL"
           fi
       
       # Send event to repository to launch new promotion
       - name: Send Event to Environment Repository
         id: send_event
+        if: steps.params.outputs.result == "OK"
         uses: peter-evans/repository-dispatch@v1
         with:
           token: "${{ secrets.token }}"
@@ -75,9 +77,33 @@ jobs:
       # Comment issue that started this event
       - name: Comment the Issue
         uses: actions/github-script@v4
+        if: steps.params.outputs.result == "OK"
+        with:
+          github-token: ${{secrets.token}}
+          script: |
+            const issue_number = "${{ github.event.client_payload.slash_command.args.named.issue_number }}"
+            const repository_owner = "${{ steps.getowner.outputs.owner }}"
+            const repository = "${{ steps.getowner.outputs.repo_name }}"
+            const body = `Sorry Event can't be submitted, please check the following:
+            - There was an error on building Promotion Payload.
+            - There is a missing parameter for the promotion command
+            `
+
+            github.issues.createComment({
+              owner: repository_owner,
+              repo: repository,
+              issue_number: issue_number,
+              body: body
+            })
+
+
+      # Comment issue that started this event
+      - name: Comment the Issue
+        uses: actions/github-script@v4
+        if: steps.params.outputs.result != "OK"
         env:
           EVENT_REPO: "${{ steps.getowner.outputs.owner }}/environment-${{ steps.getowner.outputs.owner }}-${{ github.event.client_payload.slash_command.args.named.env }}"
-          EVENT_PAYLOAD: '${{ steps.params.output.payload }}'
+          EVENT_PAYLOAD: '${{ steps.params.outputs.payload }}'
         with:
           github-token: ${{secrets.token}}
           script: |
