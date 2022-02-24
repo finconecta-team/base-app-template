@@ -54,7 +54,7 @@ jobs:
             fi
             payload="${payload}, \"fromissue\": \"${from_repo}#${from_issue}\""
             payload="${payload}, \"fromauthor\": \"${from_author}\""
-            payload="${payload}, \"deploymenttype\": \"${deploy_kind}\""
+            payload="${payload}, \"deploykind\": \"${deploy_kind}\""
             payload="${payload} } }"
 
             echo "::set-output name=payload::$payload"
