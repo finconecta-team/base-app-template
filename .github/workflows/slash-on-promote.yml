@@ -68,7 +68,7 @@ jobs:
       # Send event to repository to launch new promotion
       - name: Send Event to Environment Repository
         id: send_event
-        if: steps.params.outputs.result == "OK"
+        if: steps.params.outputs.result == 'OK'
         uses: peter-evans/repository-dispatch@v1
         with:
           token: "${{ secrets.token }}"
@@ -79,7 +79,7 @@ jobs:
       # Comment issue that started this event
       - name: Comment the Issue
         uses: actions/github-script@v4
-        if: steps.params.outputs.result == "OK"
+        if: steps.params.outputs.result == 'OK'
         with:
           github-token: ${{secrets.token}}
           script: |
