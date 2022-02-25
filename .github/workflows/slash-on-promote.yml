@@ -77,29 +77,6 @@ jobs:
           client-payload: '${{ steps.params.outputs.payload }}'
 
       # Comment issue that started this event
-      - name: Comment the Issue with Fail
-        uses: actions/github-script@v4
-        if: steps.params.outputs.result != 'OK'
-        with:
-          github-token: ${{secrets.token}}
-          script: |
-            const issue_number = "${{ github.event.client_payload.slash_command.args.named.issue_number }}"
-            const repository_owner = "${{ steps.getowner.outputs.owner }}"
-            const repository = "${{ steps.getowner.outputs.repo_name }}"
-            const body = `Sorry Event can't be submitted, please check the following:
-            - There was an error on building Promotion Payload.
-            - There is a missing parameter for the promotion command
-            `
-
-            github.issues.createComment({
-              owner: repository_owner,
-              repo: repository,
-              issue_number: issue_number,
-              body: body
-            })
-
-
-      # Comment issue that started this event
       - name: Comment the Issue
         uses: actions/github-script@v4
         if: steps.params.outputs.result == 'OK'
@@ -117,6 +94,28 @@ jobs:
             \`\`\`
             ${process.env.EVENT_PAYLOAD}
             \`\`\`
+            `
+
+            github.issues.createComment({
+              owner: repository_owner,
+              repo: repository,
+              issue_number: issue_number,
+              body: body
+            })
+
+      # Comment issue that started this event
+      - name: Comment the Issue with Fail
+        uses: actions/github-script@v4
+        if: steps.params.outputs.result != 'OK'
+        with:
+          github-token: ${{secrets.token}}
+          script: |
+            const issue_number = "${{ github.event.client_payload.slash_command.args.named.issue_number }}"
+            const repository_owner = "${{ steps.getowner.outputs.owner }}"
+            const repository = "${{ steps.getowner.outputs.repo_name }}"
+            const body = `Sorry Event can't be submitted, please check the following:
+            - There was an error on building Promotion Payload.
+            - There is a missing parameter for the promotion command
             `
 
             github.issues.createComment({
