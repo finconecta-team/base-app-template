@@ -44,7 +44,7 @@ on:
 
 jobs:
   preview:
-    runs-on: ubuntu-latest
+    runs-on: [ self-hosted, azure ]
     steps:
       # Proceed with checkout of source with all the references (depth=0)  
       - uses: actions/checkout@v2
@@ -54,8 +54,8 @@ jobs:
           token: ${{ secrets.BOT_TOKEN }}
       # Azure login
       - uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZ_CREDENTIALS }}
+        # with:
+        #   creds: ${{ secrets.AZ_CREDENTIALS }}
       # AKS context setup
       - uses: azure/aks-set-context@v3
         with:
