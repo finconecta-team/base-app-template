@@ -64,7 +64,7 @@ jobs:
           admin: 'true'
 
       # Helm Chart build & deploy Support
-      - uses: azure/setup-helm@v1
+      - uses: azure/setup-helm@v3
 
       # Get pipeline conf
       - name: Get pipeline docker enable
