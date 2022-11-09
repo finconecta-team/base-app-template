@@ -21,8 +21,8 @@ jobs:
         run: |
           repo_owner=`echo "$GITHUB_REPOSITORY" | cut -f 1 -d "/"`
           repo_name=`echo "$GITHUB_REPOSITORY" | cut -f 2 -d "/"`
-          echo "::set-output name=owner::$repo_owner"
-          echo "::set-output name=repo_name::$repo_name"
+          echo "owner=$repo_owner" >> $GITHUB_OUTPUT
+          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
       # Action parameters check
       - name: Get the actions parameters
         id: params
@@ -34,6 +34,7 @@ jobs:
           from_issue=${{ github.event.client_payload.slash_command.args.named.issue_number }}
           from_author=${{ github.event.client_payload.slash_command.args.named.author }}
           platform=${{ github.event.client_payload.slash_command.args.named.platform }}
+          tracking_id=${{ github.event.client_payload.slash_command.args.named.tracking_id }}
 
           failed=0
           if [[ "$version" == "" ]] ; then
@@ -57,14 +58,15 @@ jobs:
             payload="${payload}, \"fromissue\": \"${from_repo}#${from_issue}\""
             payload="${payload}, \"fromauthor\": \"${from_author}\""
             payload="${payload}, \"platform\": \"${platform}\""
+            payload="${payload}, \"trackingid\": \"${tracking_id}\""
             payload="${payload} } }"
 
-            echo "::set-output name=payload::$payload"
-            echo "::set-output name=result::OK"
+            echo "payload=$payload" >> $GITHUB_OUTPUT
+            echo "result=OK" >> $GITHUB_OUTPUT
             echo "payload=$payload"
           else
             echo "Promote command is incomplete please try again"
-            echo "::set-output name=result::FAIL"
+            echo "result=FAIL" >> $GITHUB_OUTPUT
           fi
       
       # Send event to repository to launch new promotion
