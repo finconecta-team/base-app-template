@@ -30,8 +30,8 @@ jobs:
           version=${{ github.event.client_payload.slash_command.args.named.version }}
           environment=${{ github.event.client_payload.slash_command.args.named.env }}
           target=${{ github.event.client_payload.slash_command.args.named.release-name }}
-          target=$target${{ github.event.client_payload.slash_command.args.named.release_name }}
-          target=$target${{ github.event.client_payload.slash_command.args.named.releasename }}
+          target=${target}${{ github.event.client_payload.slash_command.args.named.release_name }}
+          target=${target}${{ github.event.client_payload.slash_command.args.named.releasename }}
           from_repo=${{ github.event.client_payload.slash_command.args.named.issue_repository }}
           from_issue=${{ github.event.client_payload.slash_command.args.named.issue_number }}
           from_author=${{ github.event.client_payload.slash_command.args.named.author }}
