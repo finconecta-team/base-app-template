@@ -18,8 +18,6 @@ on:
       pr_name:
         required: true
         type: string
-
-    secrets:
       DOCKER_REGISTRY_ADDRESS:
         required: true
       HELM_REGISTRY_ADDRESS:
@@ -28,15 +26,17 @@ on:
         required: true
       BOT_EMAIL:
         required: true
+      AZ_AKS_RESOURCE_GROUP:
+        required: true
+      AZ_AKS_CLUSTER_NAME:
+        required: true
+
+    secrets:
       BOT_TOKEN:
         required: true
       AZURE_SERVICE_ID:
         required: true
       AZURE_SERVICE_SECRET:
-        required: true
-      AZ_AKS_RESOURCE_GROUP:
-        required: true
-      AZ_AKS_CLUSTER_NAME:
         required: true
       AZ_CREDENTIALS:
         required: true      
@@ -61,8 +61,8 @@ jobs:
       # AKS context setup
       - uses: azure/aks-set-context@v3
         with:
-          resource-group: ${{ secrets.AZ_AKS_RESOURCE_GROUP }}
-          cluster-name: ${{ secrets.AZ_AKS_CLUSTER_NAME }}
+          resource-group: ${{ inputs.AZ_AKS_RESOURCE_GROUP }}
+          cluster-name: ${{ inputs.AZ_AKS_CLUSTER_NAME }}
           admin: 'true'
 
       # Kubernetes cli
@@ -121,8 +121,8 @@ jobs:
       - name: Helm Build Preview
         if: steps.pipeline_helm.outputs.result == 1
         env:
-          HELM_REGISTRY_ADDRESS: ${{ secrets.HELM_REGISTRY_ADDRESS }}
-          DOCKER_REGISTRY_ADDRESS: ${{ secrets.DOCKER_REGISTRY_ADDRESS }}
+          HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
+          DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
           HELM_CREDS_USER: ${{ secrets.AZURE_SERVICE_ID }}
           HELM_CREDS_PASSWORD: ${{ secrets.AZURE_SERVICE_SECRET }}
           HELM_EXPERIMENTAL_OCI: "1"
@@ -135,8 +135,8 @@ jobs:
       - name: Run Preview prepare
         if: steps.pipeline_helm.outputs.result == 1
         env:
-          HELM_REGISTRY_ADDRESS: ${{ secrets.HELM_REGISTRY_ADDRESS }}
-          DOCKER_REGISTRY_ADDRESS: ${{ secrets.DOCKER_REGISTRY_ADDRESS }}
+          HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
+          DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
           HELM_CREDS_USER: ${{ secrets.AZURE_SERVICE_ID }}
           HELM_CREDS_PASSWORD: ${{ secrets.AZURE_SERVICE_SECRET }}
           HELM_EXPERIMENTAL_OCI: "1"

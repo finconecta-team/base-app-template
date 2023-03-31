@@ -18,8 +18,6 @@ on:
       pr_name:
         required: true
         type: string
-
-    secrets:
       DOCKER_REGISTRY_ADDRESS:
         required: true
       HELM_REGISTRY_ADDRESS:
@@ -28,17 +26,19 @@ on:
         required: true
       BOT_EMAIL:
         required: true
-      BOT_TOKEN:
-        required: true
       TARGET_CLOUD:
         required: true
       AWS_REGION:
         required: true
+      AWS_EKS_CLUSTER_NAME:
+        required: true
+
+    secrets:
+      BOT_TOKEN:
+        required: true
       AWS_ACCESS_KEY_ID:
         required: true
       AWS_SECRET_ACCESS_KEY:
-        required: true
-      AWS_EKS_CLUSTER_NAME:
         required: true
 
 jobs:
@@ -108,12 +108,12 @@ jobs:
       - name: Helm Build Preview
         if: steps.pipeline_helm.outputs.result == 1
         env:
-          HELM_REGISTRY_ADDRESS: ${{ secrets.HELM_REGISTRY_ADDRESS }}
-          DOCKER_REGISTRY_ADDRESS: ${{ secrets.DOCKER_REGISTRY_ADDRESS }}
+          HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
+          DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
           HELM_EXPERIMENTAL_OCI: "1"
           REPOSITORY_OWNER: ${{ steps.getowner.outputs.owner }}
           REPOSITORY_NAME: ${{ steps.getowner.outputs.repo_name }}
-          TARGET_CLOUD: ${{ secrets.TARGET_CLOUD }}
+          TARGET_CLOUD: ${{ inputs.TARGET_CLOUD }}
         run: |
           cd charts/$REPOSITORY_NAME
           make tag
@@ -124,23 +124,23 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ inputs.AWS_REGION }}
 
       # Preview install
       - name: Run Preview Install AWS
         if: steps.pipeline_helm.outputs.result == 1
         env:
-          # AWS_REGION: ${{ secrets.AWS_REGION }}
+          # AWS_REGION: ${{ vars.AWS_REGION }}
           # AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           # AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          HELM_REGISTRY_ADDRESS: ${{ secrets.HELM_REGISTRY_ADDRESS }}
-          DOCKER_REGISTRY_ADDRESS: ${{ secrets.DOCKER_REGISTRY_ADDRESS }}
+          HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
+          DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
           HELM_EXPERIMENTAL_OCI: "1"
           REPOSITORY_OWNER: ${{ steps.getowner.outputs.owner }}
           REPOSITORY_NAME: ${{ steps.getowner.outputs.repo_name }}
           PR_NAME: ${{ inputs.pr_name }}
           PREVIEW_DOMAIN_NAME: ${{ steps.preview_domain.outputs.result }}
-          CLUSTER_NAME: ${{ secrets.AWS_EKS_CLUSTER_NAME }}
+          CLUSTER_NAME: ${{ inputs.AWS_EKS_CLUSTER_NAME }}
         run: |
           cd charts/preview
           aws eks update-kubeconfig --name $CLUSTER_NAME

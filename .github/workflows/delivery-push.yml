@@ -64,7 +64,7 @@ jobs:
       # Send event to repository to launch new promotion
       - name: Send Event to Environment Repository
         id: send_event
-        uses: peter-evans/repository-dispatch@v1
+        uses: peter-evans/repository-dispatch@v2
         with:
           token: "${{ secrets.token }}"
           repository: ${{ steps.getowner.outputs.owner }}/environment-${{ steps.getowner.outputs.owner }}-${{ steps.get_env.outputs.result }}
