@@ -75,7 +75,7 @@ jobs:
       - name: Send Event to Environment Repository
         id: send_event
         if: steps.params.outputs.result == 'OK'
-        uses: peter-evans/repository-dispatch@v1
+        uses: peter-evans/repository-dispatch@v2
         with:
           token: "${{ secrets.token }}"
           repository: ${{ steps.getowner.outputs.owner }}/environment-${{ steps.getowner.outputs.owner }}-${{ github.event.client_payload.slash_command.args.named.env }}
