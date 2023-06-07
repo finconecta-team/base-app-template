@@ -17,6 +17,10 @@ on:
             target/*.zip
             target/*.tgz
         type: string
+      latest:
+        required: false
+        default: false
+        type: boolean
     secrets:
       token:
         required: true
