@@ -30,6 +30,7 @@ on:
         required: true
 
 jobs:
+  # Precondition the release is already tagged
   # Get base version in case of PR merges?
   base-version:
     runs-on: ubuntu-latest
@@ -50,22 +51,11 @@ jobs:
           VER=$(make gitflow/version/semver 2>/dev/null)
           echo "version=$VER" >> $GITHUB_OUTPUT
 
-  # Pre release tagging (because not done elsewhere)
-  pre-release-tag:
-    uses: cloudopsworks/base-app-template/.github/workflows/gitflow-push-tag.yml@develop
-    if: ${{ inputs.pre-release == true }}
-    secrets:
-      token: ${{ secrets.token }}
-    with:
-      commit_user: ${{ github.actor }}
-      commit_email: ${{ github.actor }}@users.noreply.github.com
-
   # Changelog generation
   changelog:
     if: ${{ always() }}
     needs:
       - base-version
-      - pre-release-tag
     runs-on: ubuntu-latest
     outputs:
       contents: ${{ steps.changelog.outputs.changelog }}
