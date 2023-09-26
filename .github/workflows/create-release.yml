@@ -73,6 +73,7 @@ jobs:
           token: ${{ secrets.token }}
           tag: ${{ needs.normalize.outputs.release }}
           writeToFile: false
+          includeInvalidCommits: true
 
   ## Actual creation of the release
   create:
