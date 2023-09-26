@@ -77,9 +77,9 @@ jobs:
 
   ## Actual creation of the release
   create:
-    if: ${{ always() }}
     needs:
       - changelog
+      - normalize
     runs-on: ubuntu-latest
     steps:
       - name: Download Artifacts
