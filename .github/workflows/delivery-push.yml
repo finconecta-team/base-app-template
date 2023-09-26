@@ -6,6 +6,9 @@ on:
       release_version:
         required: true
         type: string
+      release_name:
+        required: false
+        type: string
     secrets:
       token:
         required: true
@@ -51,12 +54,19 @@ jobs:
       - name: Build Payload params
         id: params
         run: |
+          repo="${{ steps.getowner.outputs.repo_name }}"
+          release_name=$repo
+          rn_in="${{ inputs.release_name }}"
+          if [[ "$rn_in" != "" ]] ; then
+            release_name="$rn_in"
+          fi
+          
           payload="{\"promote\": {"
           payload="${payload}\"repositoryowner\": \"${{ steps.getowner.outputs.owner }}\""
-          payload="${payload}, \"repository\": \"${{ steps.getowner.outputs.repo_name }}\""
+          payload="${payload}, \"repository\": \"${repo}\""
           payload="${payload}, \"environment\": \"${{ steps.get_env.outputs.result }}\""
           payload="${payload}, \"version\": \"${{ inputs.release_version }}\""
-          payload="${payload}, \"releasename\": \"${{ steps.getowner.outputs.repo_name }}\""
+          payload="${payload}, \"releasename\": \"${release_name}\""
           payload="${payload} } }"
 
           echo "::set-output name=payload::$payload"
