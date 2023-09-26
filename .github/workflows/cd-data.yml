@@ -8,7 +8,7 @@ name: CD Data Workflow Template
 on:
   workflow_call:
     secrets:
-      BOT_TOKEN:
+      token:
           required: true
     outputs:
       environment:
@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          token: ${{ secrets.BOT_TOKEN }}
+          token: ${{ secrets.token }}
 
       # Get the deployments configuration
       - name: Get the deployments configuration

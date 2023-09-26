@@ -1,5 +1,5 @@
 ##
-# (c) 2021 - Cloud Ops Works LLC - https://cloudops.works/
+# (c) 2023 - Cloud Ops Works LLC - https://cloudops.works/
 #            On GitHub: https://github.com/cloudopsworks
 #            Distributed Under Apache v2.0 License
 #
@@ -17,6 +17,10 @@ on:
             target/*.zip
             target/*.tgz
         type: string
+      pre-release:
+        required: false
+        default: false
+        type: boolean
       latest:
         required: false
         default: false
@@ -26,7 +30,59 @@ on:
         required: true
 
 jobs:
+  # Get base version in case of PR merges?
+  base-version:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.pre-release == false }}
+    outputs:
+      version: ${{ steps.base.outputs.version }}
+    steps:
+      - name: Checkout target to extract latest tag
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.token }}
+          fetch-depth: 1
+          ref: ${{ github.base_ref }}
+
+      - name: Base Version get
+        id: base
+        run: |
+          VER=$(make gitflow/version/semver 2>/dev/null)
+          echo "version=$VER" >> $GITHUB_OUTPUT
+
+  # Pre release tagging (because not done elsewhere)
+  pre-release-tag:
+    uses: cloudopsworks/base-app-template/.github/actions/gitflow-push-tag@develop
+    if: ${{ inputs.pre-release == true }}
+    secrets:
+      token: ${{ secrets.token }}
+
+  # Changelog generation
+  changelog:
+    needs:
+      - base-version
+      - pre-release-tag
+    runs-on: ubuntu-latest
+    outputs:
+      contents: ${{ steps.changelog.outputs.changelog }}
+    steps:
+      - name: Checkout target to extract latest tag
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.token }}
+          fetch-depth: 0
+
+      - name: Changelog Generation
+        uses: heinrichreimer/action-github-changelog-generator@v2.3
+        id: changelog
+        with:
+          token: ${{ secrets.token }}
+          sinceTag: ${{ needs.base-version.outputs.version }}
+
+  ## Actual creation of the release
   create:
+    needs:
+      - changelog
     runs-on: ubuntu-latest
     steps:
       - name: Download Artifacts
@@ -34,12 +90,18 @@ jobs:
         with:
           name: all-artifacts
 
+      - name: Dump Changelog contents
+        run: |
+          echo "${{ needs.changelog.outputs.contents }}" > CHANGELOG.md
+          cat CHANGELOG.md
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.token }}
           body_path: CHANGELOG.md
-          name: "Release v${{ inputs.release-tag }}"
-          tag_name: v${{ inputs.release-tag }}
+          name: "Release ${{ startsWith(inputs.release-tag,'v') ? inputs.release-tag : format('v{0}', inputs.release-tag) }}"
+          tag_name: ${{ startsWith(inputs.release-tag,'v') ? inputs.release-tag : format('v{0}', inputs.release-tag) }}
+          prerelease: ${{ inputs.pre-release }}
           files: ${{ inputs.files-globs }}
           
