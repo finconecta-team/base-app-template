@@ -56,7 +56,7 @@ jobs:
         uses: peter-evans/repository-dispatch@v2
         with:
           token: "${{ secrets.token }}"
-          repository: ${{ steps.getowner.outputs.owner }}/environment-${{ steps.getowner.outputs.owner }}-${{ steps.get_env.outputs.result }}
+          repository: ${{ steps.getowner.outputs.owner }}/environment-${{ steps.getowner.outputs.owner }}-${{ inputs.environment }}
           event-type: promote-environment
           client-payload: '${{ steps.params.outputs.payload }}'
 
