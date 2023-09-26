@@ -9,7 +9,7 @@ on:
   workflow_call:
     inputs:
       ref:
-        required: false
+        required: true
         type: string
       commit_user:
         required: true

@@ -8,6 +8,9 @@ name: Create Release
 on:
   workflow_call:
     inputs:
+      ref_name:
+        required: true
+        type: string
       release-tag:
         required: true
         type: string
@@ -71,7 +74,7 @@ jobs:
         id: changelog
         with:
           token: ${{ secrets.token }}
-          fromTag: ${{ github.ref_name }}
+          fromTag: ${{ inputs.ref_name }}
           toTag: ${{ needs.base-version.outputs.version }}
           writeToFile: false
 
