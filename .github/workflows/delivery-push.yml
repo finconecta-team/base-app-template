@@ -9,6 +9,9 @@ on:
       release_name:
         required: false
         type: string
+      environment:
+        required: true
+        type: string
     secrets:
       token:
         required: true
@@ -17,13 +20,6 @@ jobs:
   push:
     runs-on: ubuntu-latest
     steps:
-      # Proceed with checkout of source with all the references (depth=0)  
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.token }}
-          ref: v${{ inputs.release_version }}
-
       # Get the owner repo
       - name: Get owner
         id: getowner
@@ -32,23 +28,6 @@ jobs:
           repo_name=`echo "$GITHUB_REPOSITORY" | cut -f 2 -d "/"`
           echo "owner=$repo_owner" >> $GITHUB_OUTPUT
           echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
-
-      # Get pipeline conf
-      - name: Get pipeline target environment
-        id: get_env
-        uses: mikefarah/yq@master
-        with:
-          cmd: yq eval '.cd.env' ./cloudopsworks-ci.yaml
-
-      # Environment Determination
-      - name: Find Target Environment
-        id: target_env
-        run: |
-          ENV="${{ steps.get_env.outputs.result }}"
-          if [[ "$ENV" == "" ]] ; then
-            ENV="staging"
-          fi
-          echo "::set-output name=result::$ENV"
 
       # Build Payload script
       - name: Build Payload params
@@ -64,7 +43,7 @@ jobs:
           payload="{\"promote\": {"
           payload="${payload}\"repositoryowner\": \"${{ steps.getowner.outputs.owner }}\""
           payload="${payload}, \"repository\": \"${repo}\""
-          payload="${payload}, \"environment\": \"${{ steps.get_env.outputs.result }}\""
+          payload="${payload}, \"environment\": \"${{ inputs.environment }}\""
           payload="${payload}, \"version\": \"${{ inputs.release_version }}\""
           payload="${payload}, \"releasename\": \"${release_name}\""
           payload="${payload} } }"
