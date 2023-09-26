@@ -23,6 +23,12 @@ jobs:
             deploy
             promote
             rebuild
+            cleanup
+            cleanup-previews
+            release
+            release-latest
+            smoke-test
+            help
           static-args: |
             author=${{ github.actor }}
             issue_number=${{ github.event.issue.number }}
@@ -38,6 +44,7 @@ jobs:
             lgtm
             cancel
             retry
+            help
           static-args: |
             author=${{ github.actor }}
             pull_request=true
