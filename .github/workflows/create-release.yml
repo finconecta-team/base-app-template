@@ -34,31 +34,28 @@ on:
 
 jobs:
   # Precondition the release is already tagged
-  # Get base version in case of PR merges?
-  base-version:
+  normalize:
     runs-on: ubuntu-latest
-    if: ${{ inputs.pre-release == false }}
     outputs:
-      version: ${{ steps.base.outputs.version }}
+      release: ${{ steps.normalize.outputs.result }}
     steps:
-      - name: Checkout target to extract latest tag
-        uses: actions/checkout@v4
+      - name: Normalize version Tag
+        id: normalize
+        uses: actions/github-script@v6
         with:
-          token: ${{ secrets.token }}
-          fetch-depth: 1
-          ref: ${{ github.base_ref }}
-
-      - name: Base Version get
-        id: base
-        run: |
-          VER=$(make gitflow/version/semver 2>/dev/null)
-          echo "version=$VER" >> $GITHUB_OUTPUT
+          result-encoding: string
+          script: |
+            const relTag = '${{ inputs.release-tag }}'
+            var release = relTag;
+            if ( !relTag.startsWith('v') ) {
+              release = 'v' + relTag; 
+            }
+            return release;
 
   # Changelog generation
   changelog:
-    if: ${{ always() }}
     needs:
-      - base-version
+      - normalize
     runs-on: ubuntu-latest
     outputs:
       contents: ${{ steps.changelog.outputs.changelog }}
@@ -74,8 +71,7 @@ jobs:
         id: changelog
         with:
           token: ${{ secrets.token }}
-          fromTag: ${{ inputs.ref_name }}
-          toTag: ${{ needs.base-version.outputs.version }}
+          tag: ${{ needs.normalize.outputs.release }}
           writeToFile: false
 
   ## Actual creation of the release
@@ -90,25 +86,13 @@ jobs:
         with:
           name: all-artifacts
 
-      - name: Normalize version Tag
-        id: normalize
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const relTag = '${{ inputs.release-tag }}'
-            var release = relTag;
-            if ( !relTag.startsWith('v') ) {
-              release = 'v' + relTag; 
-            }
-            return release;
-
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.token }}
           body: ${{ needs.changelog.outputs.changes }}
-          name: "Release ${{ steps.normalize.outputs.result }}"
-          tag_name: ${{ steps.normalize.outputs.result }}
+          name: "Release ${{ needs.normalize.outputs.release }}"
+          tag_name: ${{ needs.normalize.outputs.release }}
           prerelease: ${{ inputs.pre-release }}
           files: ${{ inputs.files-globs }}
           
