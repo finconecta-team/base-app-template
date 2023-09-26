@@ -7,6 +7,9 @@ name: CD Data Workflow Template
 
 on:
   workflow_call:
+    secrets:
+      BOT_TOKEN:
+          required: true
     outputs:
       environment:
         value: ${{ jobs.data.outputs.environment }}
