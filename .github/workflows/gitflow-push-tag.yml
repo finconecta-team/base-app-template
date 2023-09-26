@@ -11,6 +11,12 @@ on:
       ref:
         required: false
         type: string
+      commit_user:
+        required: true
+        type: string
+      commit_email:
+        required: true
+        type: string
     secrets:
       token:
         required: true
@@ -33,7 +39,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.token }}
         run: |
-          git config --global user.name "${{ inputs.BOT_USER }}"
-          git config --global user.email "${{ inputs.BOT_EMAIL }}"
+          git config --global user.name "${{ inputs.commit_user }}"
+          git config --global user.email "${{ inputs.commit_email }}"
           make gitflow/version/tag
           make gitflow/version/publish

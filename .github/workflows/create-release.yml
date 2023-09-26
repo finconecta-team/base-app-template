@@ -56,6 +56,8 @@ jobs:
     if: ${{ inputs.pre-release == true }}
     secrets:
       token: ${{ secrets.token }}
+      commit_user: ${{ github.actor }}
+      commit_email: ${{ github.actor }}@users.noreply.github.com
 
   # Changelog generation
   changelog:
