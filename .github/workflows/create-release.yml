@@ -77,11 +77,13 @@ jobs:
           fetch-depth: 0
 
       - name: Changelog Generation
-        uses: heinrichreimer/action-github-changelog-generator@v2.3
+        uses: requarks/changelog-action@v1
         id: changelog
         with:
           token: ${{ secrets.token }}
-          sinceTag: ${{ needs.base-version.outputs.version }}
+          fromTag: ${{ github.ref_name }}
+          toTag: ${{ needs.base-version.outputs.version }}
+          writeToFile: false
 
   ## Actual creation of the release
   create:
@@ -94,11 +96,6 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: all-artifacts
-
-      - name: Dump Changelog contents
-        run: |
-          echo "${{ needs.changelog.outputs.contents }}" > CHANGELOG.md
-          cat CHANGELOG.md
 
       - name: Normalize version Tag
         id: normalize
@@ -116,7 +113,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.token }}
-          body_path: CHANGELOG.md
+          body: ${{ needs.changelog.outputs.changes }}
           name: "Release ${{ steps.normalize.outputs.result }}"
           tag_name: ${{ steps.normalize.outputs.result }}
           prerelease: ${{ inputs.pre-release }}
