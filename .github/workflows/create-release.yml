@@ -52,7 +52,7 @@ jobs:
 
   # Pre release tagging (because not done elsewhere)
   pre-release-tag:
-    uses: cloudopsworks/base-app-template/.github/actions/gitflow-push-tag@develop
+    uses: cloudopsworks/base-app-template/.github/actions/gitflow-push-tag.yml@develop
     if: ${{ inputs.pre-release == true }}
     secrets:
       token: ${{ secrets.token }}
