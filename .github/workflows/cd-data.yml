@@ -52,7 +52,7 @@ jobs:
             const deployments = JSON.parse('${{ steps.deploy_conf.outputs.result }}');
             const branch = '${{ github.ref_name }}';
 
-            var environment;
+            var environment = '';
             var isRelease = false;
             var isPreRelease = false;
             var targetName = '';
