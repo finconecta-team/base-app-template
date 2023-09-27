@@ -32,22 +32,26 @@ jobs:
         with:
           token: ${{ secrets.token }}
 
-      - name: Install yq
-        run: |
-          sudo wget -O /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.6.3/yq_linux_amd64
-          sudo chmod +x /usr/local/bin/yq
-
-      - name: Check if automatic
+      - name: Get Automatic Environment
         id: check_automatic
-        run: |
-          is_auto=$(yq e '.automatic' OWNERS)
-          if [[ "$is_auto" != "true" ]] ; then
-            is_auto=false
-          fi
-          echo "autoapprove=$is_auto" >> $GITHUB_OUTPUT
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq e '.cd.automatic' cloudopsworks-ci.yaml
+
+      - name: Get Reviewers count
+        id: reviewers_count
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq e '.requiredReviewers' cloudopsworks-ci.yaml
+
+      - name: Get Reviewers list
+        id: reviewers
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq e -j -I=0 '[.reviewers[] | select(. != "${{ github.event.pull_request.user.login }}") ]'
 
       - uses: actions/github-script@v6
-        if: ${{ steps.check_automatic.outputs.autoapprove == 'true' }}
+        if: ${{ steps.check_automatic.outputs.result == 'true' || startsWith(github.head_ref,'release/') }}
         with:
           github-token: ${{secrets.token}}
           script: |
@@ -57,23 +61,14 @@ jobs:
               repo: context.repo.repo,
               labels: ['approved', 'automatic-environment']
             })
-      
-      - name: Read reviewers from file
-        id: reviewers
-        if: ${{ steps.check_automatic.outputs.autoapprove != 'true' }}
-        run: |
-          count=$(yq e '.requiredReviewers' OWNERS)
-          reviewers_as_json=$(yq e -j -I=0 '[.reviewers[] | select(. != "${{ github.event.pull_request.user.login }}") ]' OWNERS)
-          echo "count=$count" >> $GITHUB_OUTPUT
-          echo "as_json=$reviewers_as_json" >> $GITHUB_OUTPUT
 
       - uses: actions/github-script@v6
-        if: ${{ steps.check_automatic.outputs.autoapprove != 'true' }}
+        if: ${{ steps.check_automatic.outputs.result != 'true' && ! startsWith(github.head_ref,'release/') }}
         with:
           github-token: ${{secrets.token}}
           script: |
-            const reviewers_json=JSON.parse('${{ steps.reviewers.outputs.as_json }}')
-            const reviewers_count=${{ steps.reviewers.outputs.count }}
+            const reviewers_json=JSON.parse('${{ steps.reviewers.outputs.result }}')
+            const reviewers_count=${{ steps.reviewers_count.outputs.result }}
             const actor = '${{ github.event.pull_request.user.login }}'
             
             var reviewers = []
