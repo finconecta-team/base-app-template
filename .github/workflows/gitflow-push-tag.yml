@@ -31,6 +31,7 @@ jobs:
         with:
           token: ${{ secrets.token }}
           fetch-depth: 0
+          fetch-tags: true
           ref: ${{ inputs.ref }}
 
       # Push the changes to Git TAG before deploying anything
