@@ -12,6 +12,14 @@ on:
       environment:
         required: true
         type: string
+      package_name:
+        required: false
+        type: string
+        default: ''
+      package_type:
+        required: false
+        type: string
+        default: ''
     secrets:
       token:
         required: true
@@ -29,26 +37,36 @@ jobs:
           echo "owner=$repo_owner" >> $GITHUB_OUTPUT
           echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
 
-      # Build Payload script
-      - name: Build Payload params
+      - name: Build Payload Params
         id: params
-        run: |
-          repo="${{ steps.getowner.outputs.repo_name }}"
-          release_name=$repo
-          rn_in="${{ inputs.release_name }}"
-          if [[ "$rn_in" != "" ]] ; then
-            release_name="$rn_in"
-          fi
-          
-          payload="{\"promote\": {"
-          payload="${payload}\"repositoryowner\": \"${{ steps.getowner.outputs.owner }}\""
-          payload="${payload}, \"repository\": \"${repo}\""
-          payload="${payload}, \"environment\": \"${{ inputs.environment }}\""
-          payload="${payload}, \"version\": \"${{ inputs.release_version }}\""
-          payload="${payload}, \"releasename\": \"${release_name}\""
-          payload="${payload} } }"
-
-          echo "::set-output name=payload::$payload"
+        uses: actions/github-script@v6
+        with:
+          result_encoding: string
+          script: |
+            const repo = '${{ steps.getowner.outputs.repo_name }}';
+            const repo_owner = '${{ steps.getowner.outputs.owner }}';
+            const version = '${{ inputs.release_version }}';
+            const rn_in = '${{ inputs.release_name }}';
+            const env = '${{ inputs.environment }}';
+            const package_name = '${{ inputs.package_name }}';
+            const package_type = '${{ inputs.package_type }}';
+            var release_name = repo;
+            if (rn_in !== '') {
+              release_name = rn_in;
+            }
+            const payload = {
+              promote: {
+                repositoryowner: repo_owner,
+                repository: repo,
+                environment: env,
+                version: version,
+                releasename: release_name,
+                packagename: package_name,
+                packagetype: package_type
+              }
+            };
+            console.log(JSON.stringify(payload));
+            return JSON.stringify(payload);
 
       # Send event to repository to launch new promotion
       - name: Send Event to Environment Repository
@@ -58,5 +76,5 @@ jobs:
           token: "${{ secrets.token }}"
           repository: ${{ steps.getowner.outputs.owner }}/environment-${{ steps.getowner.outputs.owner }}-${{ inputs.environment }}
           event-type: promote-environment
-          client-payload: '${{ steps.params.outputs.payload }}'
+          client-payload: '${{ steps.params.outputs.result }}'
 
