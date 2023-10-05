@@ -41,7 +41,7 @@ jobs:
         id: params
         uses: actions/github-script@v6
         with:
-          result_encoding: string
+          result-encoding: string
           script: |
             const repo = '${{ steps.getowner.outputs.repo_name }}';
             const repo_owner = '${{ steps.getowner.outputs.owner }}';
