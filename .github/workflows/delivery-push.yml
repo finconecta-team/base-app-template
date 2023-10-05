@@ -41,7 +41,7 @@ jobs:
         id: params
         uses: actions/github-script@v6
         with:
-          result-encoding: string
+          #result-encoding: string
           script: |
             const repo = '${{ steps.getowner.outputs.repo_name }}';
             const repo_owner = '${{ steps.getowner.outputs.owner }}';
@@ -66,7 +66,7 @@ jobs:
               }
             };
             console.log(JSON.stringify(payload));
-            return JSON.stringify(payload);
+            return payload;
 
       # Send event to repository to launch new promotion
       - name: Send Event to Environment Repository
@@ -76,5 +76,5 @@ jobs:
           token: "${{ secrets.token }}"
           repository: ${{ steps.getowner.outputs.owner }}/environment-${{ steps.getowner.outputs.owner }}-${{ inputs.environment }}
           event-type: promote-environment
-          client-payload: '${{ steps.params.outputs.result }}'
+          client-payload: ${{ steps.params.outputs.result }}
 
