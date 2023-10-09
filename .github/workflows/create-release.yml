@@ -66,14 +66,23 @@ jobs:
           token: ${{ secrets.token }}
           fetch-depth: 0
 
+      - name: Get previous tag
+        id: previous_tag
+        run: |
+          name=$(git --no-pager tag --sort=creatordate --merged ${{ needs.normalize.outputs.release }} | tail -2 | head -1)
+          echo "previousTag: $name"
+          echo "tag=$name" >> $GITHUB_OUTPUT
+
       - name: Changelog Generation
         uses: requarks/changelog-action@v1
         id: changelog
         with:
           token: ${{ secrets.token }}
-          tag: ${{ needs.normalize.outputs.release }}
+          fromTag: ${{ steps.previous_tag.outputs.tag }}
+          toTag: ${{ needs.normalize.outputs.release }}
           writeToFile: false
           includeInvalidCommits: true
+          excludeTypes: 'build,docs,style'
 
   ## Actual creation of the release
   create:
