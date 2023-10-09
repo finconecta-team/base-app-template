@@ -69,7 +69,7 @@ jobs:
       - name: Get previous tag
         id: previous_tag
         run: |
-          name=$(git --no-pager tag --sort=creatordate --merged ${{ needs.normalize.outputs.release }} | tail -2 | head -1)
+          name=$(git --no-pager tag --sort=creatordate --merged ${{ needs.normalize.outputs.release }} | egrep -v "alpha|beta" | tail -2 | head -1)
           echo "previousTag: $name"
           echo "tag=$name" >> $GITHUB_OUTPUT
 
