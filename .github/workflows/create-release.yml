@@ -78,8 +78,8 @@ jobs:
         id: changelog
         with:
           token: ${{ secrets.token }}
-          fromTag: ${{ steps.previous_tag.outputs.tag }}
-          toTag: ${{ needs.normalize.outputs.release }}
+          fromTag: ${{ needs.normalize.outputs.release }}
+          toTag: ${{ steps.previous_tag.outputs.tag }}
           writeToFile: false
           includeInvalidCommits: true
           excludeTypes: 'build,docs,style'
