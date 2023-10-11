@@ -93,7 +93,7 @@ jobs:
       # Comment issue that started this event
       - name: Comment the Issue
         uses: actions/github-script@v6
-        if: steps.params.outputs.outcome == 'success'
+        if: steps.params.outcome == 'success'
         env:
           EVENT_REPO: "${{ steps.getowner.outputs.owner }}/environment-${{ steps.getowner.outputs.owner }}-${{ github.event.client_payload.slash_command.args.named.env }}"
           EVENT_PAYLOAD: '${{ steps.params.outputs.payload }}'
@@ -104,6 +104,8 @@ jobs:
             const repository_owner = "${{ steps.getowner.outputs.owner }}"
             const repository = "${{ steps.getowner.outputs.repo_name }}"
             const body = `Event submitted to repository: ${process.env.EVENT_REPO}
+            #### Payload Parsing ⚙️\`${{ steps.params.outcome }}\`
+            #### Event Submission 🤖\`${{ steps.send_event.outcome }}\`
             With Payload:
             \`\`\`
             ${process.env.EVENT_PAYLOAD}
@@ -120,7 +122,7 @@ jobs:
       # Comment issue that started this event
       - name: Comment the Issue with Fail
         uses: actions/github-script@v6
-        if: steps.params.outputs.outcome != 'success' && steps.send_event.outputs.outcome != 'success'
+        if: steps.params.outcome == 'failure' || steps.send_event.outcome == 'failure'
         with:
           github-token: ${{secrets.token}}
           script: |
@@ -128,8 +130,11 @@ jobs:
             const repository_owner = "${{ steps.getowner.outputs.owner }}"
             const repository = "${{ steps.getowner.outputs.repo_name }}"
             const body = `Sorry Event can't be submitted, please check the following:
+            #### Payload Parsing ⚙️\`${{ steps.params.outcome }}\`
+            #### Event Submission 🤖\`${{ steps.send_event.outcome }}\`
             - There was an error on building Promotion Payload.
             - There is a missing parameter for the promotion command
+
             `
 
             github.rest.issues.createComment({
