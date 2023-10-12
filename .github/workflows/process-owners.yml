@@ -80,7 +80,7 @@ jobs:
       - name: Contributor list form JSON
         uses: actions/github-script@v6
         with:
-          github-token: ${{ secrets.BOT_TOKEN }}
+          github-token: ${{ secrets.token }}
           script: |
             const contrib_text = ${{ steps.contrib_list.outputs.result }};
             const contrib_json = contrib_text != null ? JSON.parse('${{ steps.contrib_list.outputs.result }}') : {};
@@ -120,7 +120,7 @@ jobs:
         if: ${{ steps.branch_protection_rules.outputs.result == 1 }}
         uses: actions/github-script@v6
         with:
-          github-token: ${{ secrets.BOT_TOKEN }}
+          github-token: ${{ secrets.token }}
           script: |
             const branchesStrict = ['main', 'master', 'support/*'];
             const branchesRelax = ['release/*', 'hotfix/*', 'feature/*', 'develop']
