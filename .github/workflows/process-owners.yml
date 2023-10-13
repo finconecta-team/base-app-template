@@ -442,4 +442,3 @@ jobs:
               contexts: ["build / build"]
             };
             await github.graphql(protection_rule, vars);
-          }
