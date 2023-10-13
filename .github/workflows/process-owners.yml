@@ -240,16 +240,16 @@ jobs:
               
               if ( rule_exists == null ) {
                 protection_rule = `
-                  mutation($repo_id: ID!, $branch: String!, $required_approve: Boolean!, $reviewers_count: Int!, $actors_ids: [ID!], $reviewers_ids: [ID!], $contexts: [String!]) {
+                  mutation($repo_id: ID!, $branch: String!, $required_approve: Boolean!, $reviewers_count: Int!, $admin_ids: [ID!], $reviewers_ids: [ID!], $contexts: [String!]) {
                     createBranchProtectionRule(input: {
                       repositoryId: $repo_id,
                       pattern: $branch,
                       requiresApprovingReviews: $required_approve,
                       requiredApprovingReviewCount: $reviewers_count,
                       restrictsPushes: true,
-                      pushActorIds: $actors_ids,
-                      bypassForcePushActorIds: $actors_ids,
-                      bypassPullRequestActorIds: $actors_ids,
+                      pushActorIds: $admin_ids,
+                      bypassForcePushActorIds: $admin_ids,
+                      bypassPullRequestActorIds: $admin_ids,
                       restrictsReviewDismissals: true,
                       reviewDismissalActorIds: $reviewers_ids,
                       requiredStatusCheckContexts: $contexts,
@@ -265,15 +265,15 @@ jobs:
                 `;
               } else {
                 protection_rule = `
-                  mutation($rule_id: ID!, $required_approve: Boolean!, $reviewers_count: Int!, $actors_ids: [ID!], $reviewers_ids: [ID!], $contexts: [String!]) {
+                  mutation($rule_id: ID!, $required_approve: Boolean!, $reviewers_count: Int!, $admin_ids: [ID!], $reviewers_ids: [ID!], $contexts: [String!]) {
                     updateBranchProtectionRule(input: {
                       branchProtectionRuleId: $rule_id,
                       requiresApprovingReviews: $required_approve,
                       requiredApprovingReviewCount: $reviewers_count,
                       restrictsPushes: true,
-                      pushActorIds: $actors_ids,
-                      bypassForcePushActorIds: $actors_ids,
-                      bypassPullRequestActorIds: $actors_ids,
+                      pushActorIds: $admin_ids,
+                      bypassForcePushActorIds: $admin_ids,
+                      bypassPullRequestActorIds: $admin_ids,
                       restrictsReviewDismissals: true,
                       reviewDismissalActorIds: $reviewers_ids,
                       requiredStatusCheckContexts: $contexts,
@@ -295,7 +295,7 @@ jobs:
                 branch: branch,
                 required_approve: default_approved,
                 reviewers_count: default_count,
-                actors_ids: owners_ids,
+                admin_ids: owners_ids,
                 reviewers_ids: reviewers_ids,
                 contexts: [ "plan / on-pr" ]
               };
@@ -311,16 +311,16 @@ jobs:
   
               if (rule_exists == null) {
                 protection_rule = `
-                  mutation($repo_id: ID!, $branch: String!, $required_approve: Boolean!, $reviewers_count: Int!, $actors_ids: [ID!], $reviewers_ids: [ID!], $contexts: [String!]) {
+                  mutation($repo_id: ID!, $branch: String!, $required_approve: Boolean!, $reviewers_count: Int!, $admin_ids: [ID!], $reviewers_ids: [ID!], $contexts: [String!]) {
                     createBranchProtectionRule(input: {
                       repositoryId: $repo_id,
                       pattern: $branch,
                       requiresApprovingReviews: $required_approve,
                       requiredApprovingReviewCount: $reviewers_count,
                       restrictsPushes: true,
-                      pushActorIds: $actors_ids,
-                      bypassForcePushActorIds: $actors_ids,
-                      bypassPullRequestActorIds: $actors_ids,
+                      pushActorIds: $admin_ids,
+                      bypassForcePushActorIds: $admin_ids,
+                      bypassPullRequestActorIds: $admin_ids,
                       restrictsReviewDismissals: true,
                       reviewDismissalActorIds: $reviewers_ids,
                       requiredStatusCheckContexts: $contexts,
@@ -337,15 +337,15 @@ jobs:
                 `;
               } else {
                 protection_rule = `
-                  mutation($rule_id: ID!, $required_approve: Boolean!, $reviewers_count: Int!, $actors_ids: [ID!], $reviewers_ids: [ID!], $contexts: [String!]) {
+                  mutation($rule_id: ID!, $required_approve: Boolean!, $reviewers_count: Int!, $admin_ids: [ID!], $reviewers_ids: [ID!], $contexts: [String!]) {
                     updateBranchProtectionRule(input: {
                       branchProtectionRuleId: $rule_id,
                       requiresApprovingReviews: $required_approve,
                       requiredApprovingReviewCount: $reviewers_count,
                       restrictsPushes: true,
-                      pushActorIds: $actors_ids,
-                      bypassForcePushActorIds: $actors_ids,
-                      bypassPullRequestActorIds: $actors_ids,
+                      pushActorIds: $admin_ids,
+                      bypassForcePushActorIds: $admin_ids,
+                      bypassPullRequestActorIds: $admin_ids,
                       restrictsReviewDismissals: true,
                       reviewDismissalActorIds: $reviewers_ids,
                       requiredStatusCheckContexts: $contexts,
@@ -368,7 +368,7 @@ jobs:
                 branch: branch,
                 required_approve: (reviewers_count > 0),
                 reviewers_count: reviewers_count,
-                actors_ids: owners_ids,
+                admin_ids: owners_ids,
                 reviewers_ids: reviewers_ids,
                 contexts: ["build / build"]
               };
@@ -380,16 +380,16 @@ jobs:
             
             if (rule_exists == null) {
               protection_rule = `
-                  mutation($repo_id: ID!, $branch: String!, $required_approve: Boolean!, $reviewers_count: Int!, $actors_ids: [ID!], $reviewers_ids: [ID!], $contexts: [String!]) {
+                  mutation($repo_id: ID!, $branch: String!, $required_approve: Boolean!, $reviewers_count: Int!, $admin_ids: [ID!], $reviewers_ids: [ID!], $contexts: [String!]) {
                     createBranchProtectionRule(input: {
                       repositoryId: $repo_id,
                       pattern: $branch,
                       requiresApprovingReviews: $required_approve,
                       requiredApprovingReviewCount: $reviewers_count,
                       restrictsPushes: true,
-                      pushActorIds: $actors_ids,
-                      bypassForcePushActorIds: $actors_ids,
-                      bypassPullRequestActorIds: $actors_ids,
+                      pushActorIds: $admin_ids,
+                      bypassForcePushActorIds: $admin_ids,
+                      bypassPullRequestActorIds: $admin_ids,
                       restrictsReviewDismissals: true,
                       reviewDismissalActorIds: $reviewers_ids,
                       requiredStatusCheckContexts: $contexts,
@@ -406,15 +406,15 @@ jobs:
                 `;
             } else {
               protection_rule = `
-                  mutation($rule_id: ID!, $required_approve: Boolean!, $reviewers_count: Int!, $actors_ids: [ID!], $reviewers_ids: [ID!], $contexts: [String!]) {
+                  mutation($rule_id: ID!, $required_approve: Boolean!, $reviewers_count: Int!, $admin_ids: [ID!], $reviewers_ids: [ID!], $contexts: [String!]) {
                     updateBranchProtectionRule(input: {
                       branchProtectionRuleId: $rule_id,
                       requiresApprovingReviews: $required_approve,
                       requiredApprovingReviewCount: $reviewers_count,
                       restrictsPushes: true,
-                      pushActorIds: $actors_ids,
-                      bypassForcePushActorIds: $actors_ids,
-                      bypassPullRequestActorIds: $actors_ids,
+                      pushActorIds: $admin_ids,
+                      bypassForcePushActorIds: $admin_ids,
+                      bypassPullRequestActorIds: $admin_ids,
                       restrictsReviewDismissals: true,
                       reviewDismissalActorIds: $reviewers_ids,
                       requiredStatusCheckContexts: $contexts,
@@ -437,7 +437,7 @@ jobs:
               branch: '*',
               required_approve: (reviewers_count > 0),
               reviewers_count: reviewers_count,
-              actors_ids: owners_ids,
+              admin_ids: owners_ids,
               reviewers_ids: reviewers_ids,
               contexts: ["build / build"]
             };
