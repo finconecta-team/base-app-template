@@ -299,7 +299,8 @@ jobs:
                 reviewers_count: default_count,
                 admin_ids: owners_ids,
                 reviewers_ids: reviewers_ids,
-                contexts: [ "plan / on-pr" ]
+                contexts: [ "plan / on-pr" ],
+                can_delete: can_delete
               };
               await github.graphql(protection_rule, vars);
             }
@@ -373,7 +374,8 @@ jobs:
                 reviewers_count: reviewers_count,
                 admin_ids: owners_ids,
                 reviewers_ids: reviewers_ids,
-                contexts: ["build / build"]
+                contexts: ["build / build"],
+                can_delete: can_delete
               };
               await github.graphql(protection_rule, vars);
             }
