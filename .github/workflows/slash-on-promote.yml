@@ -50,7 +50,6 @@ jobs:
             const from_author = '${{ github.event.client_payload.slash_command.args.named.author }}';
             const platform = '${{ github.event.client_payload.slash_command.args.named.platform }}';
 
-            var platform = '';
             var env_in = ''
             var rn_in = '';
             var env = 'default';
