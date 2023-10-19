@@ -43,25 +43,37 @@ jobs:
             const repo = '${{ steps.getowner.outputs.repo_name }}';
             const repo_owner = '${{ steps.getowner.outputs.owner }}';
             const version = '${{ github.event.client_payload.slash_command.args.named.version }}';
-            const env = '${{ github.event.client_payload.slash_command.args.named.env }}';
             const package_name = '${{ inputs.package_name }}';
             const package_type = '${{ inputs.package_type }}';
-            from_repo = '${{ github.event.client_payload.slash_command.args.named.issue_repository }}';
-            from_issue = '${{ github.event.client_payload.slash_command.args.named.issue_number }}';
-            from_author = '${{ github.event.client_payload.slash_command.args.named.author }}';
-            
-            var rn_in = '';
-            var release_name = repo;
+            const from_repo = '${{ github.event.client_payload.slash_command.args.named.issue_repository }}';
+            const from_issue = '${{ github.event.client_payload.slash_command.args.named.issue_number }}';
+            const from_author = '${{ github.event.client_payload.slash_command.args.named.author }}';
+            const platform = '${{ github.event.client_payload.slash_command.args.named.platform }}';
 
+            var platform = '';
+            var env_in = ''
+            var rn_in = '';
+            var env = 'default';
+            var release_name = repo;
+                        
+            env_in = '${{ github.event.client_payload.slash_command.args.named.env }}';
+            if ( env_in === '' ) {
+                env_in = '${{ github.event.client_payload.slash_command.args.named.environment }}';
+            }
+            
+            if ( env_in !== '' ) {
+              env = env_in;
+            }
+            
             rn_in = '${{ github.event.client_payload.slash_command.args.named.release-name }}'
-            if (rn_in === '') {
+            if ( rn_in === '' ) {
               rn_in = '${{ github.event.client_payload.slash_command.args.named.release_name }}'
-              if (rn_in === '') {
+              if ( rn_in === '' ) {
                 rn_in = '${{ github.event.client_payload.slash_command.args.named.releasename }}'
               }
             }
             
-            if (rn_in !== '') {
+            if ( rn_in !== '' ) {
               release_name = rn_in;
             }
             const payload = {
@@ -74,7 +86,8 @@ jobs:
                 fromauthor: from_author,
                 releasename: release_name,
                 packagename: package_name,
-                packagetype: package_type
+                packagetype: package_type,
+                platform: platform
               }
             };
             console.log(JSON.stringify(payload));
