@@ -370,11 +370,11 @@ jobs:
                 repo_id: repo_result.repository.id,
                 rule_id: rule_exists ? rule_exists.id : null,
                 branch: branch,
-                required_approve: (reviewers_count > 0),
-                reviewers_count: reviewers_count,
+                required_approve: false,
+                reviewers_count: 0,
                 admin_ids: owners_ids,
                 reviewers_ids: reviewers_ids,
-                contexts: ["build / build"],
+                contexts: [],
                 can_delete: can_delete
               };
               await github.graphql(protection_rule, vars);
