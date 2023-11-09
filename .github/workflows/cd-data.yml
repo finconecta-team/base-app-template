@@ -115,6 +115,12 @@ jobs:
                     targetName = deployments.release.targetName;
                   }
                 }
+              } else if ( branch === 'master' || branch === 'main' ) {
+                isRelease = true;
+                environment = deployments.release.env;
+                if ( 'targetName' in deployments.release ) {
+                  targetName = deployments.release.targetName;
+                }
               } else {
                 core.setFailed('Branch not supported');
               }
