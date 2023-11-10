@@ -21,6 +21,8 @@ on:
         value: ${{ jobs.data.outputs.targetName }}
       isEnabled:
         value: ${{ jobs.data.outputs.isEnabled }}
+      hasQualifier:
+        value: ${{ jobs.data.outputs.hasQualifier }}
 
 jobs:
   data:
@@ -30,6 +32,7 @@ jobs:
       isPreRelease: ${{ steps.workspace.outputs.isPreRelease }}
       targetName: ${{ steps.workspace.outputs.targetName }}
       isEnabled: ${{ steps.workspace.outputs.isEnabled }}
+      hasQualifier: ${{ steps.workspace.outputs.hasQualifier }}
     runs-on: ubuntu-latest
     steps:
       # Checkout the repository
@@ -60,6 +63,7 @@ jobs:
             var isPreRelease = false;
             var targetName = '';
             var isEnabled = true;
+            var hasQualifier = false;
             if ( branch.startsWith('support') ) {
               const oneMatch = deployments.support.find( ({ match }) => branch.match(new RegExp('support/'+match,'g')) );
               environment = oneMatch.env;
@@ -89,6 +93,7 @@ jobs:
                   const metasuffix = buildmeta.match(/deploy-(?<data>.*)/);
                   isEnabled = (deployments.prerelease['enabled'] == null ? true : (deployments.prerelease['enabled'] === 'true'));
                   isPreRelease = true;
+                  hasQualifier = true;
                   environment = deployments.prerelease.targets[metasuffix.groups.data].env;
                   if ( 'targetName' in deployments.prerelease.targets[metasuffix.groups.data] ) {
                     targetName = deployments.prerelease.targets[metasuffix.groups.data].targetName;
@@ -104,6 +109,7 @@ jobs:
                 } else if ( buildmeta != null ) {
                   const metasuffix = buildmeta.match(/deploy-(?<data>.*)/);
                   isRelease = true;
+                  hasQualifier = true;
                   environment = deployments.release.targets[metasuffix.groups.data].env;
                   if ( 'targetName' in deployments.release.targets[metasuffix.groups.data] ) {
                     targetName = deployments.release.targets[metasuffix.groups.data].targetName;
@@ -131,12 +137,14 @@ jobs:
               isPreRelease: isPreRelease, 
               isRelease: isRelease,
               targetName: targetName,
-              isEnabled: isEnabled
+              isEnabled: isEnabled,
+              hasQualifier: hasQualifier
             }; 
             core.setOutput('workspace', environment);
             core.setOutput('isRelease', isRelease);
             core.setOutput('isPreRelease', isPreRelease);
             core.setOutput('targetName', targetName);
             core.setOutput('isEnabled', isEnabled);
+            core.setOutput('hasQualifier', hasQualifier);
 
             return outputV;
