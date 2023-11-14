@@ -473,6 +473,9 @@ jobs:
               var targets = null;
               var isEnabled = deployment['enabled'] != null ? deployment.enabled : true;
               
+              console.log("deploy: " + deploy);
+              console.log('deployment: ' + JSON.stringify(deployment));
+              
               if (deployment['targetName'] != null)
                 targetName = deployment.targetName;
               if (deployment['targets'] != null)
