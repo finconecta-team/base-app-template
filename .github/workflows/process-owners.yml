@@ -521,7 +521,7 @@ jobs:
                 }
               `;
               
-              const repo_result = await github.graphql(env_query, {repo_name: context.repo.owner, owner: context.repo.name, env: env_name});
+              const repo_result = await github.graphql(env_query, {repo_name: context.repo.repo, owner: context.repo.owner, env: env_name});
               const env_exists = repo_result.repository.environment != null;
               
               env_query = '';
