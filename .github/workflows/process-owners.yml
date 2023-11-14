@@ -473,8 +473,8 @@ jobs:
               var targets = null;
               var isEnabled = deployment['enabled'] != null ? deployment.enabled : true;
               
-              console.log("deploy: " + deploy);
-              console.log('deployment: ' + JSON.stringify(deployment));
+              console.debug("deploy: " + deploy);
+              console.debug('deployment: ' + JSON.stringify(deployment));
               
               if (deployment['targetName'] != null)
                 targetName = deployment.targetName;
@@ -506,10 +506,16 @@ jobs:
               }
             }
             
+            console.debug('deployments_list: ' + JSON.stringify(deployments_list));
+            
             for ( const deploy in deployments_list ) {  
               const env_name = deploy.name;
               const env = deploy.key;
               const targetName = deploy.targetName;
+              
+              console.debug("env: " + env);
+              console.debug('param: ' + JSON.stringify(deploy));
+              
               // Create the environment through GraphQL Mutation set environment name and if is also production
               // check first if the environment exists on the repository
               var env_query = `
