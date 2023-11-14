@@ -510,7 +510,7 @@ jobs:
               // Create the environment through GraphQL Mutation set environment name and if is also production
               // check first if the environment exists on the repository
               var env_query = `
-                query($repo_name: String!, $owner: String, $env: String!) {
+                query($repo_name: String!, $owner: String!, $env: String!) {
                   repository(owner: $owner, name: $repo_name) {
                     environment(name: $env) {
                     name
