@@ -473,8 +473,8 @@ jobs:
               var targets = null;
               var isEnabled = deployment['enabled'] != null ? deployment.enabled : true;
               
-              console.debug("deploy: " + deploy);
-              console.debug('deployment: ' + JSON.stringify(deployment));
+              // console.debug("deploy: " + deploy);
+              // console.debug('deployment: ' + JSON.stringify(deployment));
               
               if (deployment['targetName'] != null)
                 targetName = deployment.targetName;
@@ -506,7 +506,7 @@ jobs:
               }
             }
             
-            console.debug('deployments_list: ' + JSON.stringify(deployments_list));
+            // console.debug('deployments_list: ' + JSON.stringify(deployments_list));
             
             // Create the environment through GraphQL Mutation set environment name and if is also production
             // check first if the environment exists on the repository
@@ -531,7 +531,7 @@ jobs:
             
             const repo_result = await github.graphql(env_query, env_vars);
 
-            console.debug('repo_result: ' + JSON.stringify(repo_result));
+            // console.debug('repo_result: ' + JSON.stringify(repo_result));
             
             for ( const index in deployments_list ) { 
               const deploy = deployments_list[index];
@@ -539,9 +539,9 @@ jobs:
               const env_key = deploy.key;
               const targetName = deploy.targetName;
               
-              console.debug("env: " + env_key);
-              console.debug('param: ' + JSON.stringify(deploy));
-              console.debug('repo_result: ' + JSON.stringify(repo_result));
+              // console.debug("env: " + env_key);
+              // console.debug('param: ' + JSON.stringify(deploy));
+              // console.debug('repo_result: ' + JSON.stringify(repo_result));
               
               const env_obj = repo_result.repository.environments.nodes.find( node => node.name === env_key );
               const env_exists = ( env_obj != null );
