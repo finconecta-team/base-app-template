@@ -35,7 +35,7 @@ jobs:
       targetName: ${{ steps.workspace.outputs.targetName }}
       isEnabled: ${{ steps.workspace.outputs.isEnabled }}
       hasQualifier: ${{ steps.workspace.outputs.hasQualifier }}
-      deploymentName: ${{ steps.workspace.outputs.deployment }}
+      deploymentName: ${{ steps.workspace.outputs.deploymentName }}
     runs-on: ubuntu-latest
     steps:
       # Checkout the repository
