@@ -77,6 +77,12 @@ jobs:
         with:
           cmd: yq -o=json -I=0 '.config.contributors' cloudopsworks-ci.yaml
 
+      - name: Deployments JSON
+        uses: mikefarah/yq@v4.33.3
+        id: deployments_json
+        with:
+          cmd: yq -o=json -I=0 '.cd.deployments' cloudopsworks-ci.yaml
+
       - name: Contributor list form JSON
         uses: actions/github-script@v6
         with:
@@ -447,3 +453,106 @@ jobs:
               contexts: ["build / build"]
             };
             await github.graphql(protection_rule, vars);
+
+      - name: Advanced Deployment Environments Creation
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.token }}
+          script: |
+            const deployments = JSON.parse('${{ steps.deployments_json.outputs.result }}');
+            
+            // The following loop will iterate the dict located in the deployments section of the cloudopsworks-ci.yaml file
+            // and will create the environments and the targets for each environment
+            // The JSON Format is as follows:
+            //   {"develop":{"env":"dev","targetName":"dev-target"},"release":{"env":"production","targets":{"mastercard":{"env":"production","targetName":"sink-demo"}}},"test":{"env":"staging"},"prerelease":{"env":"staging"},"hotfix":{"env":"hotfix"},"pull_request":{"env":"pull_request"},"support":[{"match":"1.5.*","env":"demo","targetName":"demo"},{"match":"1.3.*","env":"demo2","targetName":"demo2"}]}
+            const deployments_map = {};
+            for ( const deploy in deployments) {
+              const deployment = deployments[deploy];
+              const env = deployment.env;
+              var targetName = null;
+              var targets = null;
+              var isEnabled = deployment['enabled'] != null ? deployment.enabled : true;
+              
+              if (deployment['targetName'] != null)
+                targetName = deployment.targetName;
+              if (deployment['targets'] != null)
+                targets = deployment.targets;
+              
+              if ( isEnabled ) {
+                deployments_map[deployment.env] = {
+                  name: deployment,
+                  env: env,
+                  targetName: targetName
+                };
+              }
+              
+              for ( const target in targets ) {
+                const target_deployment = targets[target];
+                const target_env = target_deployment.env;
+                const target_targetName = target_deployment.targetName;
+                
+                if ( isEnabled ) {
+                  deployments_map[deployment + '-' + target_deployment] = {
+                    name: target_deployment,
+                    env: target_env,
+                    targetName: target_targetName
+                  };
+                }
+              }
+            }
+            
+            for ( const deploy in deployments_map ) {  
+              // Create the environment through GraphQL Mutation set environment name and if is also production
+              // check first if the environment exists on the repository
+              var env_query = `
+                query($repo_name: String!, $owner: String, $env: String!) {
+                  repository(owner: $owner, name: $repo_name) {
+                    environment(name: $env) {
+                    name
+                    id
+                    }
+                    id
+                  }
+                }
+              `;
+              
+              const repo_result = await github.graphql(env_query, {repo_name: context.repo.owner, owner: context.repo.name, env: env});
+              const env_exists = repo_result.repository.environment != null;
+              
+              env_query = '';
+              var env_vars = {};
+              if ( env_exists ) {
+                env_query = `
+                  mutation($env_id: ID!, $env: String!) {
+                    updateEnvironment(input: {
+                      id: $env_id,
+                      name: $env
+                    }) {
+                      clientMutationId
+                    }
+                  }
+                `;
+                
+                env_vars = {
+                  env_id: repo_result.repository.environment.id,
+                  env: env
+                };
+              } else {
+                env_query = `
+                  mutation($repo_id: ID!, $env: String!) {
+                    createEnvironment(input: {
+                      repositoryId: $repo_id,
+                      name: $env
+                    }) {
+                      clientMutationId
+                    }
+                  }
+                `;
+                
+                env_vars = {
+                  repo_id: repo_result.repository.id,
+                  env: env
+                };
+              }
+              await github.graphql(env_query, env_vars);
+            }
