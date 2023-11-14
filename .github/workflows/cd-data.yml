@@ -23,6 +23,8 @@ on:
         value: ${{ jobs.data.outputs.isEnabled }}
       hasQualifier:
         value: ${{ jobs.data.outputs.hasQualifier }}
+      deploymentName:
+        value: ${{ jobs.data.outputs.deploymentName }}
 
 jobs:
   data:
@@ -33,6 +35,7 @@ jobs:
       targetName: ${{ steps.workspace.outputs.targetName }}
       isEnabled: ${{ steps.workspace.outputs.isEnabled }}
       hasQualifier: ${{ steps.workspace.outputs.hasQualifier }}
+      deploymentName: ${{ steps.workspace.outputs.deployment }}
     runs-on: ubuntu-latest
     steps:
       # Checkout the repository
@@ -64,23 +67,26 @@ jobs:
             var targetName = '';
             var isEnabled = true;
             var hasQualifier = false;
+            var deploymentName = '';
             if ( branch.startsWith('support') ) {
               const oneMatch = deployments.support.find( ({ match }) => branch.match(new RegExp('support/'+match,'g')) );
               environment = oneMatch.env;
               targetName = oneMatch.targetName;
-            } else if ( branch.startsWith('release') ) {            
+            } else if ( branch.startsWith('release') ) {
               isPreRelease = true;
               isEnabled = (deployments.test['enabled'] == null ? true : (deployments.test['enabled'] === 'true'));
               environment = deployments.test.env;
               if ( 'targetName' in deployments.test ) {
                 targetName = deployments.test.targetName;
               }
+              deploymentName = `test/${environment}`; 
             } else if ( branch === 'develop' ) {
               isEnabled = (deployments.develop['enabled'] == null ? true : (deployments.develop['enabled'] === 'true'));
               environment = deployments.develop.env;
               if ( 'targetName' in deployments.develop ) {
                 targetName = deployments.develop.targetName;
               }
+              deploymentName = `develop/${environment}`;
             } else {
               // This semver structure is obtained as per specification https://semver.org/ & https://regex101.com/r/vkijKf/1/
               semver = branch.match(/^v(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?/);
@@ -98,6 +104,7 @@ jobs:
                   if ( 'targetName' in deployments.prerelease.targets[metasuffix.groups.data] ) {
                     targetName = deployments.prerelease.targets[metasuffix.groups.data].targetName;
                   }
+                  deploymentName = `prerelease/${buildmeta}/${environment}`;
                 } else if ( pre != null ) {
                   isEnabled = (deployments.prerelease['enabled'] == null ? true : (deployments.prerelease['enabled'] === 'true'));
                   // Regular expression to match following semver pattern: v1.0.2-alpha.10-uoiretu834u
@@ -106,6 +113,7 @@ jobs:
                   if ( 'targetName' in deployments.prerelease ) {
                     targetName = deployments.prerelease.targetName;
                   }
+                  deploymentName = `prerelease/${environment}`;
                 } else if ( buildmeta != null ) {
                   const metasuffix = buildmeta.match(/deploy-(?<data>.*)/);
                   isRelease = true;
@@ -114,12 +122,14 @@ jobs:
                   if ( 'targetName' in deployments.release.targets[metasuffix.groups.data] ) {
                     targetName = deployments.release.targets[metasuffix.groups.data].targetName;
                   }
+                  deploymentName = `release/${buildmeta}/${environment}`;
                 } else {
                   isRelease = true;
                   environment = deployments.release.env;
                   if ( 'targetName' in deployments.release ) {
                     targetName = deployments.release.targetName;
                   }
+                  deploymentName = `release/${environment}`;
                 }
               } else if ( branch === 'master' || branch === 'main' ) {
                 isRelease = true;
@@ -127,6 +137,7 @@ jobs:
                 if ( 'targetName' in deployments.release ) {
                   targetName = deployments.release.targetName;
                 }
+                deploymentName = `release/${environment}`;
               } else {
                 core.setFailed('Branch not supported');
               }
@@ -138,7 +149,8 @@ jobs:
               isRelease: isRelease,
               targetName: targetName,
               isEnabled: isEnabled,
-              hasQualifier: hasQualifier
+              hasQualifier: hasQualifier,
+              deploymentName: deploymentName
             }; 
             core.setOutput('workspace', environment);
             core.setOutput('isRelease', isRelease);
@@ -146,5 +158,6 @@ jobs:
             core.setOutput('targetName', targetName);
             core.setOutput('isEnabled', isEnabled);
             core.setOutput('hasQualifier', hasQualifier);
+            core.setOutput('deploymentName', deploymentName);
 
             return outputV;
