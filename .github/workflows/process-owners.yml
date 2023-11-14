@@ -531,14 +531,15 @@ jobs:
             for ( const index in deployments_list ) { 
               const deploy = deployments_list[index];
               const env_name = deploy.name;
-              const env = deploy.key;
+              const env_key = deploy.key;
               const targetName = deploy.targetName;
               
-              console.debug("env: " + env);
+              console.debug("env: " + env_key);
               console.debug('param: ' + JSON.stringify(deploy));
               console.debug('repo_result: ' + JSON.stringify(repo_result));
-
-              const env_exists = repo_result.repository.environments.nodes.find( node => node.name === env ) != null
+              
+              const env_obj = repo_result.repository.environments.nodes.find( node => node.name === env_key );
+              const env_exists = ( env_obj != null );
               
               env_query = '';
               var env_vars = {};
@@ -555,8 +556,8 @@ jobs:
                 `;
                 
                 env_vars = {
-                  env_id: repo_result.repository.environment.id,
-                  env: env
+                  env_id: env_obj.id,
+                  env: env_key
                 };
               } else {
                 env_query = `
@@ -572,7 +573,7 @@ jobs:
                 
                 env_vars = {
                   repo_id: repo_result.repository.id,
-                  env: env
+                  env: env_key
                 };
               }
               await github.graphql(env_query, env_vars);
