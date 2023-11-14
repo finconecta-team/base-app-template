@@ -508,7 +508,8 @@ jobs:
             
             console.debug('deployments_list: ' + JSON.stringify(deployments_list));
             
-            for ( const deploy in deployments_list ) {  
+            for ( const index in deployments_list ) { 
+              const deploy = deployments_list[index];
               const env_name = deploy.name;
               const env = deploy.key;
               const targetName = deploy.targetName;
