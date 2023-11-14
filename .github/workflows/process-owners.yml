@@ -536,8 +536,9 @@ jobs:
               
               console.debug("env: " + env);
               console.debug('param: ' + JSON.stringify(deploy));
-              
-              const env_exists = repo_result.repository.nodes.find( node => node.name === env ) != null
+              console.debug('repo_result: ' + JSON.stringify(repo_result));
+
+              const env_exists = repo_result.repository.environments.nodes.find( node => node.name === env ) != null
               
               env_query = '';
               var env_vars = {};
