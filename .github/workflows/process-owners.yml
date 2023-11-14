@@ -465,7 +465,7 @@ jobs:
             // and will create the environments and the targets for each environment
             // The JSON Format is as follows:
             //   {"develop":{"env":"dev","targetName":"dev-target"},"release":{"env":"production","targets":{"mastercard":{"env":"production","targetName":"sink-demo"}}},"test":{"env":"staging"},"prerelease":{"env":"staging"},"hotfix":{"env":"hotfix"},"pull_request":{"env":"pull_request"},"support":[{"match":"1.5.*","env":"demo","targetName":"demo"},{"match":"1.3.*","env":"demo2","targetName":"demo2"}]}
-            const deployments_map = {};
+            const deployments_list = [];
             for ( const deploy in deployments) {
               const deployment = deployments[deploy];
               const env = deployment.env;
@@ -479,29 +479,34 @@ jobs:
                 targets = deployment.targets;
               
               if ( isEnabled ) {
-                deployments_map[deployment.env] = {
-                  name: deployment,
+                deployments_list.push({
+                  key: deploy + '/' + env,
+                  name: deploy,
                   env: env,
                   targetName: targetName
-                };
-              }
-              
-              for ( const target in targets ) {
-                const target_deployment = targets[target];
-                const target_env = target_deployment.env;
-                const target_targetName = target_deployment.targetName;
+                });
                 
-                if ( isEnabled ) {
-                  deployments_map[deployment + '-' + target_deployment] = {
-                    name: target_deployment,
-                    env: target_env,
-                    targetName: target_targetName
-                  };
+                for ( const target in targets ) {
+                  const target_deployment = targets[target];
+                  const target_env = target_deployment.env;
+                  const target_targetName = target_deployment['targetName'];
+                  
+                  if ( isEnabled ) {
+                    deployments_list.push({
+                      key: deploy + '/' + target + '/' + target_env,
+                      name: target,
+                      env: target_env,
+                      targetName: target_targetName
+                    });
+                  }
                 }
               }
             }
             
-            for ( const deploy in deployments_map ) {  
+            for ( const deploy in deployments_list ) {  
+              const env_name = deploy.name;
+              const env = deploy.env;
+              const targetName = deploy.targetName;
               // Create the environment through GraphQL Mutation set environment name and if is also production
               // check first if the environment exists on the repository
               var env_query = `
@@ -516,7 +521,7 @@ jobs:
                 }
               `;
               
-              const repo_result = await github.graphql(env_query, {repo_name: context.repo.owner, owner: context.repo.name, env: env});
+              const repo_result = await github.graphql(env_query, {repo_name: context.repo.owner, owner: context.repo.name, env: env_name});
               const env_exists = repo_result.repository.environment != null;
               
               env_query = '';
@@ -535,7 +540,7 @@ jobs:
                 
                 env_vars = {
                   env_id: repo_result.repository.environment.id,
-                  env: env
+                  env: env_name
                 };
               } else {
                 env_query = `
