@@ -521,7 +521,7 @@ jobs:
                 }
               `;
               
-              const repo_result = await github.graphql(env_query, {repo_name: context.repo.repo, owner: context.repo.owner, env: env_name});
+              const repo_result = await github.graphql(env_query, {repo_name: context.repo.repo, owner: context.repo.owner, env: env});
               const env_exists = repo_result.repository.environment != null;
               
               env_query = '';
@@ -540,7 +540,7 @@ jobs:
                 
                 env_vars = {
                   env_id: repo_result.repository.environment.id,
-                  env: env_name
+                  env: env
                 };
               } else {
                 env_query = `
