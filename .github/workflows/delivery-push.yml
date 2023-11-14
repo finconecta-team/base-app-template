@@ -20,6 +20,9 @@ on:
         required: false
         type: string
         default: ''
+      deployment_name:
+        required: true
+        type: string
     secrets:
       token:
         required: true
@@ -27,6 +30,8 @@ on:
 jobs:
   push:
     runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.deployment_name }}
     steps:
       # Get the owner repo
       - name: Get owner
