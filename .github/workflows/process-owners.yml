@@ -524,7 +524,12 @@ jobs:
                 }
               `;
             
-            const repo_result = await github.graphql(env_query, {repo_name: context.repo.repo, owner: context.repo.owner});
+            var env_vars = {
+              repo_name: context.repo.repo, 
+              owner: context.repo.owner
+            };
+            
+            const repo_result = await github.graphql(env_query, env_vars);
 
             console.debug('repo_result: ' + JSON.stringify(repo_result));
             
@@ -542,24 +547,8 @@ jobs:
               const env_exists = ( env_obj != null );
               
               env_query = '';
-              var env_vars = {};
-              if ( env_exists ) {
-                env_query = `
-                  mutation($env_id: ID!, $env: String!) {
-                    updateEnvironment(input: {
-                      id: $env_id,
-                      name: $env
-                    }) {
-                      clientMutationId
-                    }
-                  }
-                `;
-                
-                env_vars = {
-                  env_id: env_obj.id,
-                  env: env_key
-                };
-              } else {
+              env_vars = {};
+              if ( ! env_exists ) {
                 env_query = `
                   mutation($repo_id: ID!, $env: String!) {
                     createEnvironment(input: {
@@ -575,6 +564,6 @@ jobs:
                   repo_id: repo_result.repository.id,
                   env: env_key
                 };
+                await github.graphql(env_query, env_vars);
               }
-              await github.graphql(env_query, env_vars);
             }
