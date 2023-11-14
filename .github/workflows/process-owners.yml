@@ -481,7 +481,7 @@ jobs:
               if (deployment['targets'] != null)
                 targets = deployment.targets;
               
-              if ( isEnabled ) {
+              if ( isEnabled && deploy !== 'support' ) {
                 deployments_list.push({
                   key: deploy + '/' + env,
                   name: deploy,
