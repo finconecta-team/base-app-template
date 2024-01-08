@@ -1,0 +1,46 @@
+##
+# (c) 2023 - Cloud Ops Works LLC - https://cloudops.works/
+#            On GitHub: https://github.com/cloudopsworks
+#            Distributed Under Apache v2.0 License
+#
+name: Git Flow push tag with Tronador accelerate
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      commit_user:
+        required: true
+        type: string
+      commit_email:
+        required: true
+        type: string
+    secrets:
+      token:
+        required: true
+
+jobs:
+  push_tag:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.token }}
+          fetch-depth: 0
+          fetch-tags: true
+          ref: ${{ inputs.ref }}
+
+      # Push the changes to Git TAG before deploying anything
+      - name: Push TAG
+        id: tagged
+        env:
+          GITHUB_TOKEN: ${{ secrets.token }}
+        run: |
+          git config --global user.name "${{ inputs.commit_user }}"
+          git config --global user.email "${{ inputs.commit_email }}"
+          make gitflow/version/tag
+          make gitflow/version/publish

@@ -6,6 +6,23 @@ on:
       release_version:
         required: true
         type: string
+      release_name:
+        required: false
+        type: string
+      environment:
+        required: true
+        type: string
+      package_name:
+        required: false
+        type: string
+        default: ''
+      package_type:
+        required: false
+        type: string
+        default: ''
+      deployment_name:
+        required: true
+        type: string
     secrets:
       token:
         required: true
@@ -13,14 +30,9 @@ on:
 jobs:
   push:
     runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.deployment_name }}
     steps:
-      # Proceed with checkout of source with all the references (depth=0)  
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.token }}
-          ref: v${{ inputs.release_version }}
-
       # Get the owner repo
       - name: Get owner
         id: getowner
@@ -30,36 +42,36 @@ jobs:
           echo "owner=$repo_owner" >> $GITHUB_OUTPUT
           echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
 
-      # Get pipeline conf
-      - name: Get pipeline target environment
-        id: get_env
-        uses: mikefarah/yq@master
-        with:
-          cmd: yq eval '.cd.env' ./cloudopsworks-ci.yaml
-
-      # Environment Determination
-      - name: Find Target Environment
-        id: target_env
-        run: |
-          ENV="${{ steps.get_env.outputs.result }}"
-          if [[ "$ENV" == "" ]] ; then
-            ENV="staging"
-          fi
-          echo "::set-output name=result::$ENV"
-
-      # Build Payload script
-      - name: Build Payload params
+      - name: Build Payload Params
         id: params
-        run: |
-          payload="{\"promote\": {"
-          payload="${payload}\"repositoryowner\": \"${{ steps.getowner.outputs.owner }}\""
-          payload="${payload}, \"repository\": \"${{ steps.getowner.outputs.repo_name }}\""
-          payload="${payload}, \"environment\": \"${{ steps.get_env.outputs.result }}\""
-          payload="${payload}, \"version\": \"${{ inputs.release_version }}\""
-          payload="${payload}, \"releasename\": \"${{ steps.getowner.outputs.repo_name }}\""
-          payload="${payload} } }"
-
-          echo "::set-output name=payload::$payload"
+        uses: actions/github-script@v6
+        with:
+          #result-encoding: string
+          script: |
+            const repo = '${{ steps.getowner.outputs.repo_name }}';
+            const repo_owner = '${{ steps.getowner.outputs.owner }}';
+            const version = '${{ inputs.release_version }}';
+            const rn_in = '${{ inputs.release_name }}';
+            const env = '${{ inputs.environment }}';
+            const package_name = '${{ inputs.package_name }}';
+            const package_type = '${{ inputs.package_type }}';
+            var release_name = repo;
+            if (rn_in !== '') {
+              release_name = rn_in;
+            }
+            const payload = {
+              promote: {
+                repositoryowner: repo_owner,
+                repository: repo,
+                environment: env,
+                version: version,
+                releasename: release_name,
+                packagename: package_name,
+                packagetype: package_type
+              }
+            };
+            console.log(JSON.stringify(payload));
+            return payload;
 
       # Send event to repository to launch new promotion
       - name: Send Event to Environment Repository
@@ -67,7 +79,7 @@ jobs:
         uses: peter-evans/repository-dispatch@v2
         with:
           token: "${{ secrets.token }}"
-          repository: ${{ steps.getowner.outputs.owner }}/environment-${{ steps.getowner.outputs.owner }}-${{ steps.get_env.outputs.result }}
+          repository: ${{ steps.getowner.outputs.owner }}/environment-${{ steps.getowner.outputs.owner }}-${{ inputs.environment }}
           event-type: promote-environment
-          client-payload: '${{ steps.params.outputs.payload }}'
+          client-payload: ${{ steps.params.outputs.result }}
 
