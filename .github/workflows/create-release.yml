@@ -58,7 +58,7 @@ jobs:
       - normalize
     runs-on: ubuntu-latest
     outputs:
-      contents: ${{ steps.changelog.outputs.changelog }}
+      contents: ${{ steps.changelog.outputs.changes }}
     steps:
       - name: Checkout target to extract latest tag
         uses: actions/checkout@v4
@@ -66,14 +66,23 @@ jobs:
           token: ${{ secrets.token }}
           fetch-depth: 0
 
+      - name: Get previous tag
+        id: previous_tag
+        run: |
+          name=$(git --no-pager tag --sort=creatordate --merged ${{ needs.normalize.outputs.release }} | egrep -v "alpha|beta" | tail -2 | head -1)
+          echo "previousTag: $name"
+          echo "tag=$name" >> $GITHUB_OUTPUT
+
       - name: Changelog Generation
         uses: requarks/changelog-action@v1
         id: changelog
         with:
           token: ${{ secrets.token }}
-          tag: ${{ needs.normalize.outputs.release }}
+          fromTag: ${{ needs.normalize.outputs.release }}
+          toTag: ${{ steps.previous_tag.outputs.tag }}
           writeToFile: false
           includeInvalidCommits: true
+          excludeTypes: 'build,docs,style'
 
   ## Actual creation of the release
   create:
@@ -91,7 +100,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.token }}
-          body: ${{ needs.changelog.outputs.changes }}
+          body: ${{ needs.changelog.outputs.contents }}
           name: "Release ${{ needs.normalize.outputs.release }}"
           tag_name: ${{ needs.normalize.outputs.release }}
           prerelease: ${{ inputs.pre-release }}

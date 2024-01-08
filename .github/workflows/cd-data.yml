@@ -19,6 +19,12 @@ on:
         value: ${{ jobs.data.outputs.isPreRelease }}
       targetName:
         value: ${{ jobs.data.outputs.targetName }}
+      isEnabled:
+        value: ${{ jobs.data.outputs.isEnabled }}
+      hasQualifier:
+        value: ${{ jobs.data.outputs.hasQualifier }}
+      deploymentName:
+        value: ${{ jobs.data.outputs.deploymentName }}
 
 jobs:
   data:
@@ -27,6 +33,9 @@ jobs:
       isRelease: ${{ steps.workspace.outputs.isRelease }}
       isPreRelease: ${{ steps.workspace.outputs.isPreRelease }}
       targetName: ${{ steps.workspace.outputs.targetName }}
+      isEnabled: ${{ steps.workspace.outputs.isEnabled }}
+      hasQualifier: ${{ steps.workspace.outputs.hasQualifier }}
+      deploymentName: ${{ steps.workspace.outputs.deploymentName }}
     runs-on: ubuntu-latest
     steps:
       # Checkout the repository
@@ -56,46 +65,99 @@ jobs:
             var isRelease = false;
             var isPreRelease = false;
             var targetName = '';
+            var isEnabled = true;
+            var hasQualifier = false;
+            var deploymentName = '';
             if ( branch.startsWith('support') ) {
               const oneMatch = deployments.support.find( ({ match }) => branch.match(new RegExp('support/'+match,'g')) );
               environment = oneMatch.env;
               targetName = oneMatch.targetName;
-            } else if ( branch.startsWith('release') ) {            
+            } else if ( branch.startsWith('release') ) {
               isPreRelease = true;
+              isEnabled = (deployments.test['enabled'] == null ? true : (deployments.test['enabled'] === 'true'));
               environment = deployments.test.env;
               if ( 'targetName' in deployments.test ) {
                 targetName = deployments.test.targetName;
               }
-            } else if ( branch.match(/^v[0-9]+\.[0-9]+\.[0-9]+-.*[-\.].*/) ) {
-              // Regular expression to match following semver pattern: v1.0.2-alpha.10-uoiretu834u kind of alpha or beta taggings
-              isPreRelease = true;
-              environment = deployments.prerelease.env;
-              if ( 'targetName' in deployments.prerelease ) {
-                targetName = deployments.prerelease.targetName;
-              }
+              deploymentName = `test/${environment}`; 
             } else if ( branch === 'develop' ) {
+              isEnabled = (deployments.develop['enabled'] == null ? true : (deployments.develop['enabled'] === 'true'));
               environment = deployments.develop.env;
               if ( 'targetName' in deployments.develop ) {
                 targetName = deployments.develop.targetName;
               }
-            } else if ( branch === 'main' || branch === 'master' || branch.match(/^v[0-9]+\.[0-9]+\.[0-9]+$/) ) {
-              isRelease = true;
-              environment = deployments.release.env;
-              if ( 'targetName' in deployments.release ) {
-                targetName = deployments.release.targetName;
-              }
+              deploymentName = `develop/${environment}`;
             } else {
-              core.setFailed('Branch not supported');
+              // This semver structure is obtained as per specification https://semver.org/ & https://regex101.com/r/vkijKf/1/
+              semver = branch.match(/^v(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?/);
+              if ( semver != null ) {
+                const pre = semver['groups']['prerelease'];
+                const buildmeta = semver['groups']['buildmetadata'];
+                // buildmeta format is deploy-XXXX.yyy.zzz
+                // the metasuffix should be the deploy- prefix
+                if ( pre != null && buildmeta != null) {
+                  const metasuffix = buildmeta.match(/deploy-(?<data>.*)/);
+                  isEnabled = (deployments.prerelease['enabled'] == null ? true : (deployments.prerelease['enabled'] === 'true'));
+                  isPreRelease = true;
+                  hasQualifier = true;
+                  environment = deployments.prerelease.targets[metasuffix.groups.data].env;
+                  if ( 'targetName' in deployments.prerelease.targets[metasuffix.groups.data] ) {
+                    targetName = deployments.prerelease.targets[metasuffix.groups.data].targetName;
+                  }
+                  deploymentName = `prerelease/${buildmeta}/${environment}`;
+                } else if ( pre != null ) {
+                  isEnabled = (deployments.prerelease['enabled'] == null ? true : (deployments.prerelease['enabled'] === 'true'));
+                  // Regular expression to match following semver pattern: v1.0.2-alpha.10-uoiretu834u
+                  isPreRelease = true;
+                  environment = deployments.prerelease.env;
+                  if ( 'targetName' in deployments.prerelease ) {
+                    targetName = deployments.prerelease.targetName;
+                  }
+                  deploymentName = `prerelease/${environment}`;
+                } else if ( buildmeta != null ) {
+                  const metasuffix = buildmeta.match(/deploy-(?<data>.*)/);
+                  isRelease = true;
+                  hasQualifier = true;
+                  environment = deployments.release.targets[metasuffix.groups.data].env;
+                  if ( 'targetName' in deployments.release.targets[metasuffix.groups.data] ) {
+                    targetName = deployments.release.targets[metasuffix.groups.data].targetName;
+                  }
+                  deploymentName = `release/${buildmeta}/${environment}`;
+                } else {
+                  isRelease = true;
+                  environment = deployments.release.env;
+                  if ( 'targetName' in deployments.release ) {
+                    targetName = deployments.release.targetName;
+                  }
+                  deploymentName = `release/${environment}`;
+                }
+              } else if ( branch === 'master' || branch === 'main' ) {
+                isRelease = true;
+                environment = deployments.release.env;
+                if ( 'targetName' in deployments.release ) {
+                  targetName = deployments.release.targetName;
+                }
+                deploymentName = `release/${environment}`;
+              } else {
+                core.setFailed('Branch not supported');
+              }
             }
+            
             const outputV = { 
               environment: environment, 
               isPreRelease: isPreRelease, 
               isRelease: isRelease,
-              targetName: targetName
+              targetName: targetName,
+              isEnabled: isEnabled,
+              hasQualifier: hasQualifier,
+              deploymentName: deploymentName
             }; 
             core.setOutput('workspace', environment);
             core.setOutput('isRelease', isRelease);
             core.setOutput('isPreRelease', isPreRelease);
             core.setOutput('targetName', targetName);
+            core.setOutput('isEnabled', isEnabled);
+            core.setOutput('hasQualifier', hasQualifier);
+            core.setOutput('deploymentName', deploymentName);
 
             return outputV;

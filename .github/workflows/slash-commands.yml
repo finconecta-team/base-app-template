@@ -28,6 +28,7 @@ jobs:
             release
             release-latest
             smoke-test
+            retry
             help
           static-args: |
             author=${{ github.actor }}
