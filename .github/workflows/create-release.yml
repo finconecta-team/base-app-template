@@ -96,11 +96,17 @@ jobs:
         with:
           name: all-artifacts
 
+      - name: Changelog Dump to File
+        run: |
+          cat > CHANGELOG.txt <<EOF
+          ${{ needs.changelog.outputs.contents }}
+          EOF
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.token }}
-          body: ${{ needs.changelog.outputs.contents }}
+          file: CHANGELOG.txt
           name: "Release ${{ needs.normalize.outputs.release }}"
           tag_name: ${{ needs.normalize.outputs.release }}
           prerelease: ${{ inputs.pre-release }}
