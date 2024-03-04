@@ -90,7 +90,7 @@ jobs:
           name: the-changelog
           retention-days: 1
           overwrite: true
-          path: CHANGELOG.txt
+          path: CHANGELOG.md
 
   ## Actual creation of the release
   create:
@@ -105,7 +105,7 @@ jobs:
           name: the-changelog
 
       - name: Check Changelog
-        run: ls -l CHANGELOG.txt
+        run: ls -l CHANGELOG.md
 
 #      - name: Changelog Dump to File
 #        run: |
@@ -117,7 +117,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.token }}
-          file: CHANGELOG.txt
+          file: CHANGELOG.md
           name: "Release ${{ needs.normalize.outputs.release }}"
           tag_name: ${{ needs.normalize.outputs.release }}
           prerelease: ${{ inputs.pre-release }}
