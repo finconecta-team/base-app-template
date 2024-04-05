@@ -24,6 +24,5 @@ jobs:
         uses: actions/delete-package-versions@v4
         with:
             package-name: ${{ github.repository }}
-            package-version: ${{ github.ref }}
             package-type: ${{ inputs.package_type }}
             token: ${{ secrets.token }}
