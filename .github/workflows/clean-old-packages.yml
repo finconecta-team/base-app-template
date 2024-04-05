@@ -1,0 +1,29 @@
+##
+# (c) 2024 - Cloud Ops Works LLC - https://cloudops.works/
+#            On GitHub: https://github.com/cloudopsworks
+#            Distributed Under Apache v2.0 License
+#
+name: Cleanup of old packages from repository
+
+on:
+  workflow_call:
+    inputs:
+      package_type:
+        type: string
+        required: true
+
+    secrets:
+      token:
+        required: true
+
+jobs:
+  cleanup:
+    runs-on: unbuntu-latest
+    steps:
+      - name: Cleanup Package
+        uses: actions/delete-package-versions@v4
+        with:
+            package-name: ${{ github.repository }}
+            package-version: ${{ github.ref }}
+            package-type: ${{ inputs.package_type }}
+            token: ${{ secrets.token }}
