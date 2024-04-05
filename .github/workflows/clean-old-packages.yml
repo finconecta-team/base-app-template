@@ -18,7 +18,7 @@ on:
 
 jobs:
   cleanup:
-    runs-on: unbuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Cleanup Package
         uses: actions/delete-package-versions@v4
