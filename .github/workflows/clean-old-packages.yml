@@ -11,6 +11,9 @@ on:
       package_type:
         type: string
         required: true
+      package_name:
+        type: string
+        required: true
 
     secrets:
       token:
@@ -23,6 +26,6 @@ jobs:
       - name: Cleanup Package
         uses: actions/delete-package-versions@v4
         with:
-            package-name: ${{ github.repository }}
+            package-name: ${{ inputs.package_name }}
             package-type: ${{ inputs.package_type }}
             token: ${{ secrets.token }}
