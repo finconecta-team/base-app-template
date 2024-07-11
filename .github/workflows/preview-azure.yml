@@ -82,7 +82,7 @@ jobs:
         id: pipeline_docker
         uses: mikefarah/yq@master
         with:
-          cmd: yq eval '.pipeline[]' ./cloudopsworks-ci.yaml | grep docker | wc -l
+          cmd: yq eval '.pipeline[]' ./.github/cloudopsworks-ci.yaml | grep docker | wc -l
 
       # Get pipeline conf
       - name: Get pipeline preview enabled

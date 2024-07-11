@@ -25,6 +25,14 @@ on:
         value: ${{ jobs.data.outputs.hasQualifier }}
       deploymentName:
         value: ${{ jobs.data.outputs.deploymentName }}
+      cloud:
+        value ${{ jobs.data.outputs.cloud }}
+      cloudType:
+        value ${{ jobs.data.outputs.cloudType }}
+      apisEnabled:
+        value ${{ jobs.data.outputs.apisEnabled }}
+      isAutomatic:
+        value ${{ jobs.data.outputs.isAutomatic }}
 
 jobs:
   data:
@@ -36,6 +44,10 @@ jobs:
       isEnabled: ${{ steps.workspace.outputs.isEnabled }}
       hasQualifier: ${{ steps.workspace.outputs.hasQualifier }}
       deploymentName: ${{ steps.workspace.outputs.deploymentName }}
+      cloud: ${{ steps.cloud.outputs.result }}
+      cloudType: ${{ steps.cloud_type.outputs.result }}
+      apisEnabled: ${{ steps.apis_enabled.outputs.result }}
+      isAutomatic: ${{ steps.is_automatic.outputs.result }}
     runs-on: ubuntu-latest
     steps:
       # Checkout the repository
@@ -49,10 +61,38 @@ jobs:
         id: deploy_conf
         uses: mikefarah/yq@master
         with:
-          cmd: yq -o=json -I=0 '.cd.deployments' cloudopsworks-ci.yaml
+          cmd: yq -o=json -I=0 '.cd.deployments' .github/cloudopsworks-ci.yaml
+          
+      # Get the cloud entry from .github/cloudopsworks-ci.yaml as plain text
+      - name: Get Cloud Entry
+        id: cloud
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq e '.cd.cloud' .github/cloudopsworks-ci.yaml | tr '[:lower:]' '[:upper:]'
+
+      # Get the cloud type from .github/cloudopsworks-ci.yaml as plain text
+      - name: Get Cloud Type
+        id: cloud_type
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq e '.cd.cloud_type' .github/cloudopsworks-ci.yaml
+
+      # Get the apis enabled from .github/cloudopsworks-ci.yaml as plain text
+      - name: Get APIs Enabled
+        id: apis_enabled
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq e '.cd.apis.enabled // false' .github/cloudopsworks-ci.yaml
+
+      # Get the automatic setting from .github/cloudopsworks-ci.yaml as plain text
+      - name: Get Automatic Setting
+        id: apis_enabled
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq e '.cd.automatic // false' .github/cloudopsworks-ci.yaml
 
       # Set the appropriate workspace from what is configured from the deploy_conf step
-      # Result is stored as JSON with the format found on the cd.deployments section on cloudopsworks-ci.yaml
+      # Result is stored as JSON with the format found on the cd.deployments section on .github/cloudopsworks-ci.yaml
       - name: Set the appropriate workspace
         id: workspace
         uses: actions/github-script@v6
