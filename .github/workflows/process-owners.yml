@@ -602,11 +602,12 @@ jobs:
               
               const env_obj = repo_result.repository.environments.nodes.find( node => node.name === env_key );
               const env_exists = ( env_obj != null );
-              var env_id = env_obj.id
+              var env_id = null;
               
               env_query = '';
               env_vars = {};
               if ( ! env_exists ) {
+                env_id = env_obj.id
                 env_query = `
                   mutation($repo_id: ID!, $env: String!) {
                     createEnvironment(input: {
