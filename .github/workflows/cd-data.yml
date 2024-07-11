@@ -86,7 +86,7 @@ jobs:
 
       # Get the automatic setting from .github/cloudopsworks-ci.yaml as plain text
       - name: Get Automatic Setting
-        id: apis_enabled
+        id: automatic
         uses: mikefarah/yq@master
         with:
           cmd: yq e '.cd.automatic // false' .github/cloudopsworks-ci.yaml
