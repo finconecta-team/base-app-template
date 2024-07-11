@@ -1,0 +1,199 @@
+##
+# (c) 2022-2024 - Cloud Ops Works LLC - https://cloudops.works/
+#            On GitHub: https://github.com/cloudopsworks
+#            Distributed Under Apache v2.0 License
+#
+name: Deploy to AWS Elastic Beanstalk
+on:
+  workflow_call:
+    inputs:
+      release_version:
+        required: true
+        type: string
+      release_name:
+        required: false
+        type: string
+      environment:
+        required: true
+        type: string
+      package_name:
+        required: false
+        type: string
+        default: ''
+      package_type:
+        required: false
+        type: string
+        default: ''
+      deployment_name:
+        required: true
+        type: string
+      target_cloud:
+        required: true
+        type: string
+      target_cloud_type:
+        required: true
+        type: string
+      DOCKER_REGISTRY_ADDRESS:
+        required: false
+        type: string
+      HELM_REGISTRY_ADDRESS:
+        required: false
+        type: string
+      BOT_USER:
+        required: true
+        type: string
+      BOT_EMAIL:
+        required: true
+        type: string
+      AWS_REGION:
+        required: false
+        type: string
+    secrets:
+      token:
+        required: true
+      AWS_ACCESS_KEY_ID:
+        required: false
+      AWS_SECRET_ACCESS_KEY:
+        required: false
+      AZURE_SERVICE_ID:
+        required: false
+      AZURE_SERVICE_SECRET:
+        required: false
+
+env:
+  tofu_version: 1.7.1
+  tg_version: 0.59.5
+jobs:
+  data:
+    uses: ./.github/workflows/cd-data.yml
+    secrets:
+      token: ${{ secrets.token }}
+
+  deployment-plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: source
+          fetch-depth: 1
+          token: ${{ secrets.token }}
+
+      - uses: actions/checkout@v4
+        with:
+          repository: cloudopsworks/base-app-template
+          path: cd-${{ inputs.environment }}
+          fetch-depth: 1
+          token: ${{ secrets.token }}
+
+      - name: Setup OpenTofu
+        id: setup_opentofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.tofu_version }}
+          tofu_wrapper: false
+
+      - name: Setup Terragrunt v${{ env.tg_version }}
+        run: |
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.tg_version }}/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+          terragrunt -v
+
+      - name: Copy configurations
+        run: |
+          cp -p source/.github/vars/inputs-${{ inputs.environment }}.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/input.yaml
+
+      - name: Generate release.yaml
+        run: |
+          cat > cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release.yaml << EOF 
+          release:
+            name: ${{ inputs.release_name }}
+            source:
+              name: ${{ inputs.deployment_name }}
+              version: ${{ inputs.release_version }}
+              githubPackages:
+                name: '${{ inputs.package_name }}'
+                type: ${{ inputs.package_type }}
+          EOF
+
+      - name: Generate Global Inputs global-inputs.yaml
+        run: |
+          cat > cd-${{ inputs.environment }}/global-inputs.yaml << EOF
+          environment: ${{ inputs.environment }}
+          release_name: ${{ inputs.release_name }}
+          default:
+            region: ${{ vars.DEPLOYMENT_AWS_REGION }}
+            sts_role_arn: ${{ vars.DEPLOYMENT_STS_ROLE_ARN }}
+          EOF
+
+      - name: Generate state_conf.yaml from vars.DEPLOYMENT_STATE_CONF
+        run: |
+          cat > cd-${{ inputs.environment }}/state_conf.yaml << EOF
+          ${{ vars.DEPLOYMENT_STATE_CONF }}
+          EOF
+
+      - name: Terragrunt Plan
+        id: plan
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: terragrunt plan -no-color -input=false -out plan.tfplan
+        continue-on-error: false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          HELM_CREDS_USER: ${{ secrets.AZURE_SERVICE_ID }}
+          HELM_CREDS_PASSWORD: ${{ secrets.AZURE_SERVICE_SECRET }}
+          HELM_EXPERIMENTAL_OCI: "1"
+          GITHUB_API_TOKEN: ${{ secrets.token }}
+
+      - name: Save Plan File
+        uses: actions/upload-artifact@v4
+        with:
+          token: ${{ secrets.token }}
+          name: plan-file
+          path: |
+            **/*/*.yaml
+            **/*/plan.tfplan
+
+  deployment-apply:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.deployment_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: cloudopsworks/base-app-template
+          path: cd-${{ inputs.environment }}
+          fetch-depth: 1
+          token: ${{ secrets.token }}
+
+      - name: Restore Plan File
+        uses: actions/download-artifact
+        with:
+          token:  ${{ secrets.token }}
+          name: plan-file
+          path: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}
+
+      - name: Setup OpenTofu
+        id: setup_opentofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.tofu_version }}
+          tofu_wrapper: false
+
+      - name: Setup Terragrunt v${{ env.tg_version }}
+        run: |
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.tg_version }}/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+          terragrunt -v
+
+      - name: Terragrunt Apply
+        id: apply
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          terragrunt apply -no-color plan.tfplan
+        continue-on-error: false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          HELM_CREDS_USER: ${{ secrets.AZURE_SERVICE_ID }}
+          HELM_CREDS_PASSWORD: ${{ secrets.AZURE_SERVICE_SECRET }}
+          HELM_EXPERIMENTAL_OCI: "1"
+          GITHUB_API_TOKEN: ${{ secrets.token }}
