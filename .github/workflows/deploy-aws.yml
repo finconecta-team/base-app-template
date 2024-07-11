@@ -165,7 +165,7 @@ jobs:
           token: ${{ secrets.token }}
 
       - name: Restore Plan File
-        uses: actions/download-artifact
+        uses: actions/download-artifact@v4
         with:
           token:  ${{ secrets.token }}
           name: plan-file
