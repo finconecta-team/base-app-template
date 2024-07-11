@@ -101,7 +101,7 @@ jobs:
     secrets: inherit
 
   deploy-aws-eks:
-    uses: ./.github/workflows/deploy/aws/deploy-eks.yml
+    uses: ./.github/workflows/deploy-aws.yml
     if: ${{ inputs.target_cloud == 'AWS' && ( inputs.target_cloud_type == 'kubernetes' || inputs.target_cloud_type == 'eks' ) }}
     with:
       release_version: ${{ inputs.release_version }}
@@ -120,7 +120,7 @@ jobs:
     secrets: inherit
 
   deploy-aws-lambda:
-    uses: ./.github/workflows/deploy/aws/deploy-lambda.yml
+    uses: ./.github/workflows/deploy-aws.yml
     if: ${{ inputs.target_cloud == 'AWS' && inputs.target_cloud_type == 'lambda' }}
     with:
       release_version: ${{ inputs.release_version }}
