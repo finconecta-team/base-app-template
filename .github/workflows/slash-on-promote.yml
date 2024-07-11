@@ -36,7 +36,7 @@ jobs:
       - name: Build Payload Params
         id: params
         continue-on-error: true
-        uses: actions/github-script@v6
+        uses: actions/github-script@7
         with:
           #result-encoding: string
           script: |
@@ -104,7 +104,7 @@ jobs:
 
       # Comment issue that started this event
       - name: Comment the Issue
-        uses: actions/github-script@v6
+        uses: actions/github-script@7
         if: steps.params.outcome == 'success'
         env:
           EVENT_REPO: "${{ steps.getowner.outputs.owner }}/environment-${{ steps.getowner.outputs.owner }}-${{ github.event.client_payload.slash_command.args.named.env }}"
@@ -133,7 +133,7 @@ jobs:
 
       # Comment issue that started this event
       - name: Comment the Issue with Fail
-        uses: actions/github-script@v6
+        uses: actions/github-script@7
         if: steps.params.outcome == 'failure' || steps.send_event.outcome == 'failure'
         with:
           github-token: ${{secrets.token}}

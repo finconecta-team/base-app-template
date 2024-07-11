@@ -26,13 +26,13 @@ on:
       deploymentName:
         value: ${{ jobs.data.outputs.deploymentName }}
       cloud:
-        value ${{ jobs.data.outputs.cloud }}
+        value: ${{ jobs.data.outputs.cloud }}
       cloudType:
-        value ${{ jobs.data.outputs.cloudType }}
+        value: ${{ jobs.data.outputs.cloudType }}
       apisEnabled:
-        value ${{ jobs.data.outputs.apisEnabled }}
+        value: ${{ jobs.data.outputs.apisEnabled }}
       isAutomatic:
-        value ${{ jobs.data.outputs.isAutomatic }}
+        value: ${{ jobs.data.outputs.isAutomatic }}
 
 jobs:
   data:
@@ -86,7 +86,7 @@ jobs:
 
       # Get the automatic setting from .github/cloudopsworks-ci.yaml as plain text
       - name: Get Automatic Setting
-        id: apis_enabled
+        id: automatic
         uses: mikefarah/yq@master
         with:
           cmd: yq e '.cd.automatic // false' .github/cloudopsworks-ci.yaml
@@ -95,7 +95,7 @@ jobs:
       # Result is stored as JSON with the format found on the cd.deployments section on .github/cloudopsworks-ci.yaml
       - name: Set the appropriate workspace
         id: workspace
-        uses: actions/github-script@v6
+        uses: actions/github-script@7
         with:
           script: |
             const deployments = JSON.parse('${{ steps.deploy_conf.outputs.result }}');

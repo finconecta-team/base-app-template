@@ -41,7 +41,7 @@ jobs:
     steps:
       - name: Normalize version Tag
         id: normalize
-        uses: actions/github-script@v6
+        uses: actions/github-script@7
         with:
           result-encoding: string
           script: |
