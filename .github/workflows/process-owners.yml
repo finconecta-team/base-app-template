@@ -460,6 +460,52 @@ jobs:
           github-token: ${{ secrets.token }}
           script: |
             const deployments = JSON.parse('${{ steps.deployments_json.outputs.result }}');
+            const reviewers_json = JSON.parse('${{ steps.reviewers_list.outputs.result }}');
+            
+            // Get reviewers list
+            var reviewers = [];
+            for ( const rev of reviewers_json ) {
+              reviewers.push(rev);
+            }
+
+            teams_query = `
+              query($login: String!) {
+                organization(login: $login) {
+                  teams(first: 100) {
+                    nodes {
+                      id
+                      name
+                      slug
+                    }
+                  }
+                }
+              }
+            `
+            const teams_result = await github.graphql(teams_query, {login: context.repo.owner});
+            
+            members_query = `
+              query($login: String!) {
+                organization(login: $login) {
+                  membersWithRole(first: 100) {
+                    nodes {
+                      login
+                      id
+                    }
+                  }
+                }
+              }
+            `
+            const members_result = await github.graphql(members_query, {login: context.repo.owner});
+
+            const reviewers_ids = [];
+            for ( const reviewer_name of reviewers ) {
+              console.log("reviewer_name: " + reviewer_name);
+              reviewer = members_result.organization.membersWithRole.nodes.find( member => member.login === reviewer_name );
+              if ( reviewer != null ) {
+                console.log("reviewer_id" + reviewer.id);
+                reviewers_ids.push(reviewer.id);
+              }
+            }
             
             // The following loop will iterate the dict located in the deployments section of the .github/cloudopsworks-ci.yaml file
             // and will create the environments and the targets for each environment
@@ -472,6 +518,11 @@ jobs:
               var targetName = null;
               var targets = null;
               var isEnabled = deployment['enabled'] != null ? deployment.enabled : true;
+              var variables = deployment['variables'] != null ? deployment.variables : {};
+              var reviewers = false;
+            
+              if ( isEnabled && (deploy === 'release' || deploy === 'prerelease') )
+                reviewers = deployment['reviewers'] != null ? deployment.reviewers : true;
               
               // console.debug("deploy: " + deploy);
               // console.debug('deployment: ' + JSON.stringify(deployment));
@@ -486,7 +537,9 @@ jobs:
                   key: deploy + '/' + env,
                   name: deploy,
                   env: env,
-                  targetName: targetName
+                  targetName: targetName,
+                  reviewers: reviewers ? reviewers_ids : [],
+                  variables: variables
                 });
                 
                 for ( const target in targets ) {
@@ -499,7 +552,9 @@ jobs:
                       key: deploy + '/' + target + '/' + target_env,
                       name: target,
                       env: target_env,
-                      targetName: target_targetName
+                      targetName: target_targetName,
+                      reviewers: reviewers ? reviewers_ids : [],
+                      variables: variables
                     });
                   }
                 }
@@ -538,6 +593,8 @@ jobs:
               const env_name = deploy.name;
               const env_key = deploy.key;
               const targetName = deploy.targetName;
+              const reviewers = deploy.reviewers
+              const variables = deploy.variables
               
               // console.debug("env: " + env_key);
               // console.debug('param: ' + JSON.stringify(deploy));
@@ -545,6 +602,7 @@ jobs:
               
               const env_obj = repo_result.repository.environments.nodes.find( node => node.name === env_key );
               const env_exists = ( env_obj != null );
+              var env_id = env_obj.id
               
               env_query = '';
               env_vars = {};
@@ -555,7 +613,8 @@ jobs:
                       repositoryId: $repo_id,
                       name: $env
                     }) {
-                      clientMutationId
+                      clientMutationId,
+                      environment
                     }
                   }
                 `;
@@ -564,6 +623,38 @@ jobs:
                   repo_id: repo_result.repository.id,
                   env: env_key
                 };
-                await github.graphql(env_query, env_vars);
+                env_id = (await github.graphql(env_query, env_vars).environment.id);
               }
+  
+              console.debug("env_id: " + env_id);
+  
+              env_query = '';
+              env_query = `
+                mutation($environment_id: ID!, $reviewers: [ID!], $no_self_review: Boolean!) {
+                  updateEnvironment(input: {
+                    environmentId: $environment_id,
+                    preventSelfReview: $no_self_review,
+                    reviewers: $reviewers
+                  }) {
+                    clientMutationId
+                  }
+                }
+              `;
+              env_vars = {
+                environment_id: env_obj.environment.id,
+                reviewers: reviewers,
+                no_self_review: true
+              };
+              
+              console.debug("env_query: " + env_query);
+              console.debug("env_vars: " + JSON.stringify(env_vars));
+              await github.graphql(env_query, env_vars);
+            
+              var variable_list = await octokit.rest.actions.listEnvironmentVariables({
+                repo_name: context.repo.repo, 
+                owner: context.repo.owner,
+                environment_name: env_name
+              });
+              console.debug("variable_list: " + JSON.stringify(variable_list));
             }
+            
