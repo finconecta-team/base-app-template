@@ -1,4 +1,9 @@
-name: Delivery Push to Evironment Repo
+##
+# (c) 2022-2024 - Cloud Ops Works LLC - https://cloudops.works/
+#            On GitHub: https://github.com/cloudopsworks
+#            Distributed Under Apache v2.0 License
+#
+name: Continuous deployment to target environment
 
 on:
   workflow_call:
@@ -23,15 +28,49 @@ on:
       deployment_name:
         required: true
         type: string
+      target_cloud:
+        required: true
+        type: string
+      target_cloud_type:
+        required: true
+        type: string
+      DOCKER_REGISTRY_ADDRESS:
+        required: false
+        type: string
+      HELM_REGISTRY_ADDRESS:
+        required: false
+        type: string
+      BOT_USER:
+        required: true
+        type: string
+      BOT_EMAIL:
+        required: true
+        type: string
+      AWS_REGION:
+        required: false
+        type: string
     secrets:
       token:
         required: true
+      AWS_ACCESS_KEY_ID:
+        required: false
+      AWS_SECRET_ACCESS_KEY:
+        required: false
+      AZURE_SERVICE_ID:
+        required: false
+      AZURE_SERVICE_SECRET:
+        required: false
 
 jobs:
-  push:
+  data:
+    uses: ./.github/workflows/cd-data.yml
+    secrets:
+      token: ${{ secrets.BOT_TOKEN }}
+
+  project_data:
     runs-on: ubuntu-latest
-    environment:
-      name: ${{ inputs.deployment_name }}
+    outputs:
+      project_name: ${{ steps.getowner.outputs.repo_name }}
     steps:
       # Get the owner repo
       - name: Get owner
@@ -42,44 +81,59 @@ jobs:
           echo "owner=$repo_owner" >> $GITHUB_OUTPUT
           echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
 
-      - name: Build Payload Params
-        id: params
-        uses: actions/github-script@v6
-        with:
-          #result-encoding: string
-          script: |
-            const repo = '${{ steps.getowner.outputs.repo_name }}';
-            const repo_owner = '${{ steps.getowner.outputs.owner }}';
-            const version = '${{ inputs.release_version }}';
-            const rn_in = '${{ inputs.release_name }}';
-            const env = '${{ inputs.environment }}';
-            const package_name = '${{ inputs.package_name }}';
-            const package_type = '${{ inputs.package_type }}';
-            var release_name = repo;
-            if (rn_in !== '') {
-              release_name = rn_in;
-            }
-            const payload = {
-              promote: {
-                repositoryowner: repo_owner,
-                repository: repo,
-                environment: env,
-                version: version,
-                releasename: release_name,
-                packagename: package_name,
-                packagetype: package_type
-              }
-            };
-            console.log(JSON.stringify(payload));
-            return payload;
+  deploy-aws-eb:
+    uses: ./.github/workflows/deploy/aws/deploy.yml
+    if: ${{ inputs.target_cloud == 'AWS' && ( inputs.target_cloud_type == 'eb' || inputs.target_cloud_type == 'elasticbeanstalk' ) }}
+    with:
+      release_version: ${{ inputs.release_version }}
+      release_name: ${{ inputs.release_name }}
+      environment: ${{ inputs.environment }}
+      package_name: ${{ inputs.package_name }}
+      package_type: ${{ inputs.package_type }}
+      deployment_name: ${{ inputs.deployment_name }}
+      target_cloud: "aws"
+      target_cloud_type: "beanstalk"
+      DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
+      HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
+      BOT_USER: ${{ inputs.BOT_USER }}
+      BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
+      AWS_REGION: ${{ inputs.AWS_REGION }}
+    secrets: inherit
 
-      # Send event to repository to launch new promotion
-      - name: Send Event to Environment Repository
-        id: send_event
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: "${{ secrets.token }}"
-          repository: ${{ steps.getowner.outputs.owner }}/environment-${{ steps.getowner.outputs.owner }}-${{ inputs.environment }}
-          event-type: promote-environment
-          client-payload: ${{ steps.params.outputs.result }}
+  deploy-aws-eks:
+    uses: ./.github/workflows/deploy/aws/deploy-eks.yml
+    if: ${{ inputs.target_cloud == 'AWS' && ( inputs.target_cloud_type == 'kubernetes' || inputs.target_cloud_type == 'eks' ) }}
+    with:
+      release_version: ${{ inputs.release_version }}
+      release_name: ${{ inputs.release_name }}
+      environment: ${{ inputs.environment }}
+      package_name: ${{ inputs.package_name }}
+      package_type: ${{ inputs.package_type }}
+      deployment_name: ${{ inputs.deployment_name }}
+      target_cloud: "aws"
+      target_cloud_type: "kubernetes"
+      DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
+      HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
+      BOT_USER: ${{ inputs.BOT_USER }}
+      BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
+      AWS_REGION: ${{ inputs.AWS_REGION }}
+    secrets: inherit
 
+  deploy-aws-lambda:
+    uses: ./.github/workflows/deploy/aws/deploy-lambda.yml
+    if: ${{ inputs.target_cloud == 'AWS' && inputs.target_cloud_type == 'lambda' }}
+    with:
+      release_version: ${{ inputs.release_version }}
+      release_name: ${{ inputs.release_name }}
+      environment: ${{ inputs.environment }}
+      package_name: ${{ inputs.package_name }}
+      package_type: ${{ inputs.package_type }}
+      deployment_name: ${{ inputs.deployment_name }}
+      target_cloud: "aws"
+      target_cloud_type: "lambda"
+      DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
+      HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
+      BOT_USER: ${{ inputs.BOT_USER }}
+      BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
+      AWS_REGION: ${{ inputs.AWS_REGION }}
+    secrets: inherit
