@@ -607,7 +607,6 @@ jobs:
               env_query = '';
               env_vars = {};
               if ( ! env_exists ) {
-                env_id = env_obj.id
                 env_query = `
                   mutation($repo_id: ID!, $env: String!) {
                     createEnvironment(input: {
@@ -625,8 +624,10 @@ jobs:
                   env: env_key
                 };
                 env_id = (await github.graphql(env_query, env_vars).environment.id);
+              } else {
+                env_id = env_obj.id
               }
-  
+            
               console.debug("env_id: " + env_id);
   
               env_query = '';
