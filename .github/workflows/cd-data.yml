@@ -26,13 +26,13 @@ on:
       deploymentName:
         value: ${{ jobs.data.outputs.deploymentName }}
       cloud:
-        value ${{ jobs.data.outputs.cloud }}
+        value: ${{ jobs.data.outputs.cloud }}
       cloudType:
-        value ${{ jobs.data.outputs.cloudType }}
+        value: ${{ jobs.data.outputs.cloudType }}
       apisEnabled:
-        value ${{ jobs.data.outputs.apisEnabled }}
+        value: ${{ jobs.data.outputs.apisEnabled }}
       isAutomatic:
-        value ${{ jobs.data.outputs.isAutomatic }}
+        value: ${{ jobs.data.outputs.isAutomatic }}
 
 jobs:
   data:
