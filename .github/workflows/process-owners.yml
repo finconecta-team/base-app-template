@@ -657,7 +657,7 @@ jobs:
               var variable_list = await github.rest.actions.listEnvironmentVariables({
                 repo_name: context.repo.repo, 
                 owner: context.repo.owner,
-                environment_name: env_name
+                environment_name: env_key
               });
               console.debug("variable_list: " + JSON.stringify(variable_list));
             }
