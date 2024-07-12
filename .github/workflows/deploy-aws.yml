@@ -176,7 +176,7 @@ jobs:
         id: plan
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
-          ls -latR
+          ls -laR
           terragrunt plan -no-color -input=false -out plan.tfplan
         continue-on-error: false
         env:
@@ -237,6 +237,7 @@ jobs:
         id: apply
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
+          ls -laR
           terragrunt apply -no-color plan.tfplan
         continue-on-error: false
         env:
