@@ -596,10 +596,10 @@ jobs:
               const reviewers = deploy.reviewers
               const variables = deploy.variables
               
-              // console.debug("env: " + env_key);
-              // console.debug('param: ' + JSON.stringify(deploy));
-              // console.debug('repo_result: ' + JSON.stringify(repo_result));
-              
+              console.debug("env: " + env_key);
+              console.debug('param: ' + JSON.stringify(deploy));
+              console.debug('repo_result: ' + JSON.stringify(repo_result));
+
               const env_obj = repo_result.repository.environments.nodes.find( node => node.name === env_key );
               const env_exists = ( env_obj != null );
               var env_id = null;
