@@ -87,6 +87,15 @@ jobs:
           fetch-depth: 1
           token: ${{ secrets.token }}
 
+      # Get the owner repo
+      - name: Get owner
+        id: getowner
+        run: |
+          repo_owner=`echo "$GITHUB_REPOSITORY" | cut -f 1 -d "/"`
+          repo_name=`echo "$GITHUB_REPOSITORY" | cut -f 2 -d "/"`
+          echo "owner=$repo_owner" >> $GITHUB_OUTPUT
+          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
+
       - name: Setup OpenTofu
         id: setup_opentofu
         uses: opentofu/setup-opentofu@v1
@@ -109,7 +118,7 @@ jobs:
         run: |
           cat > cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release.yaml << EOF 
           release:
-            name: ${{ inputs.release_name }}
+            name: ${{ inputs.release_name != '' && inputs.release_name || steps.getowner.outputs.repo_name }}
             source:
               name: ${{ inputs.deployment_name }}
               version: ${{ inputs.release_version }}
@@ -122,7 +131,7 @@ jobs:
         run: |
           cat > cd-${{ inputs.environment }}/global-inputs.yaml << EOF
           environment: ${{ inputs.environment }}
-          release_name: ${{ inputs.release_name }}
+          release_name: ${{ inputs.release_name != '' && inputs.release_name || steps.getowner.outputs.repo_name }}
           default:
             region: ${{ vars.DEPLOYMENT_AWS_REGION }}
             sts_role_arn: ${{ vars.DEPLOYMENT_STS_ROLE_ARN }}
