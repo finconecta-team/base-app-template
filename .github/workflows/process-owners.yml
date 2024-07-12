@@ -614,7 +614,7 @@ jobs:
                       name: $env
                     }) {
                       clientMutationId,
-                      environment() {
+                      environment {
                         id,
                         name
                       }
