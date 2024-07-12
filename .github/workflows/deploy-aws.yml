@@ -218,7 +218,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: plan-file
-          path: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}
+          path: cd-${{ inputs.environment }}
 
       - name: Setup OpenTofu
         id: setup_opentofu
