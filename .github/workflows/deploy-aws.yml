@@ -101,6 +101,17 @@ jobs:
           echo "owner=$repo_owner" >> $GITHUB_OUTPUT
           echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
 
+      - name: Set Final Release Name
+        id: release_name
+        run: |
+          REL=
+          if [ -z "${{ inputs.release_name }}" ]; then
+            REL="${{ steps.getowner.outputs.repo_name }}"
+          else
+            REL="${{ inputs.release_name }}"
+          fi
+          echo "value=$REL" >> $GITHUB_OUTPUT
+
       - name: Setup OpenTofu
         id: setup_opentofu
         uses: opentofu/setup-opentofu@v1
@@ -122,18 +133,18 @@ jobs:
       - name: Copy Values Bundle
         run: |
           mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
-          cp -pfR source/.github/values/${{ inputs.environment }}/${{ inputs.release_name }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+          cp -pfR source/.github/values/${{ inputs.environment }}/${{ steps.release_name.outputs.value }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
 
       - name: Create Hash value for values bundle
         run: |
           cd cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
-          find values/${{ inputs.release_name }} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ inputs.release_name }}
+          find values/${{ steps.release_name.outputs.value }} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ steps.release_name.outputs.value }}
 
       - name: Generate release.yaml
         run: |
           cat > cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release.yaml << EOF 
           release:
-            name: ${{ inputs.release_name != '' && inputs.release_name || steps.getowner.outputs.repo_name }}
+            name: ${{ steps.release_name.outputs.value }}
             source:
               name: ${{ inputs.deployment_name }}
               version: ${{ inputs.release_version }}
@@ -146,7 +157,7 @@ jobs:
         run: |
           cat > cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/global-inputs.yaml << EOF
           environment: ${{ inputs.environment }}
-          release_name: ${{ inputs.release_name != '' && inputs.release_name || steps.getowner.outputs.repo_name }}
+          release_name: ${{ steps.release_name.outputs.value }}
           default:
             region: ${{ vars.DEPLOYMENT_AWS_REGION }}
             sts_role_arn: ${{ vars.DEPLOYMENT_STS_ROLE_ARN }}
@@ -177,8 +188,10 @@ jobs:
           token: ${{ secrets.token }}
           name: plan-file
           path: |
-            **/*/*.yaml
-            **/*/plan.tfplan
+            **/values/**/*
+            **/.values_hash_*
+            **/*.yaml
+            **/plan.tfplan
 
   deployment-apply:
     needs:
