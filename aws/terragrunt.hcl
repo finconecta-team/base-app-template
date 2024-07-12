@@ -7,7 +7,7 @@
 terraform {
   extra_arguments "plan_file" {
     commands  = ["plan"]
-    arguments = ["-out=${get_terragrunt_dir()}/tfplan.out"]
+    arguments = ["-out=${get_terragrunt_dir()}/plan.tfplan"]
   }
 }
 # load local variables from state_conf.yaml
