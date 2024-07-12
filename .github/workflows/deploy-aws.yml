@@ -63,6 +63,7 @@ on:
 env:
   tofu_version: 1.7.1
   tg_version: 0.59.5
+  base_app_version: 2
 jobs:
   data:
     uses: ./.github/workflows/cd-data.yml
@@ -88,6 +89,7 @@ jobs:
           repository: cloudopsworks/base-app-template
           path: cd-${{ inputs.environment }}
           fetch-depth: 1
+          ref: v${{ env.base_app_version }}
           token: ${{ secrets.token }}
 
       # Get the owner repo
@@ -175,11 +177,13 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.deployment_name }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Base App Template
+        uses: actions/checkout@v4
         with:
           repository: cloudopsworks/base-app-template
           path: cd-${{ inputs.environment }}
           fetch-depth: 1
+          ref: v${{ env.base_app_version }}
           token: ${{ secrets.token }}
 
       - name: Restore Plan File
