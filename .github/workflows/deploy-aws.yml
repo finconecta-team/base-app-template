@@ -70,6 +70,7 @@ jobs:
       token: ${{ secrets.token }}
 
   deployment-plan:
+    environment: ${{ inputs.deployment_name }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
