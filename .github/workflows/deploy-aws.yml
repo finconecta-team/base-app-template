@@ -134,7 +134,7 @@ jobs:
 
       - name: Generate Global Inputs global-inputs.yaml
         run: |
-          cat > cd-${{ inputs.environment }}/global-inputs.yaml << EOF
+          cat > cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/global-inputs.yaml << EOF
           environment: ${{ inputs.environment }}
           release_name: ${{ inputs.release_name != '' && inputs.release_name || steps.getowner.outputs.repo_name }}
           default:
@@ -144,7 +144,7 @@ jobs:
 
       - name: Generate state_conf.yaml from vars.DEPLOYMENT_STATE_CONF
         run: |
-          cat > cd-${{ inputs.environment }}/state_conf.yaml << EOF
+          cat > cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/state_conf.yaml << EOF
           ${{ vars.DEPLOYMENT_STATE_CONF }}
           EOF
 
