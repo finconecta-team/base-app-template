@@ -147,7 +147,7 @@ jobs:
           release:
             name: ${{ steps.release_name.outputs.value }}
             source:
-              name: ${{ inputs.deployment_name }}
+              name: ${{ steps.getowner.outputs.repo_name }}
               version: ${{ inputs.release_version }}
               githubPackages:
                 name: '${{ inputs.package_name }}'
