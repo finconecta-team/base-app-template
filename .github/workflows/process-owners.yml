@@ -628,6 +628,7 @@ jobs:
                 };
                 env_id = (await github.graphql(env_query, env_vars).environment.id);
               } else {
+                console.debug("env_obj: " + JSON.stringify(env_obj));
                 env_id = env_obj.id
               }
             
