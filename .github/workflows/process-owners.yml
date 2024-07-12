@@ -615,7 +615,7 @@ jobs:
                     }) {
                       clientMutationId,
                       environment {
-                        Id
+                        id
                       }
                     }
                   }
