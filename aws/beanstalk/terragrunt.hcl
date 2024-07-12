@@ -35,5 +35,5 @@ inputs = {
   api_gateway     = local.local_vars.api_gateway
   alarms          = local.local_vars.alarms
   release         = local.release_vars.release
-  extra_tags      = local.local_vars.tags
+  extra_tags      = try(local.local_vars.tags, {})
 }
