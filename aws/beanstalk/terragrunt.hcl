@@ -26,6 +26,8 @@ inputs = {
     environment_name  = local.base_vars.environment_name
     environment_type  = local.base_vars.namespace
   }
+  repository_owner =local.base_vars.repository_owner
+  namespace       = local.base_vars.namespace
   versions_bucket = local.base_vars.versions_bucket
   logs_bucket     = try(local.base_vars.logs_bucket, "")
   region          = local.global_vars.default.region
