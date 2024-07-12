@@ -659,7 +659,7 @@ jobs:
               console.debug("env_vars: " + JSON.stringify(env_vars));
               await github.graphql(env_query, env_vars);
 
-              var curr_variables = await github.rest.actions.listEnvironmentVariables({
+              var curr_variables = github.rest.actions.listEnvironmentVariables({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 environment_name: env_key,
