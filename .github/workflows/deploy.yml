@@ -65,7 +65,7 @@ jobs:
   data:
     uses: ./.github/workflows/cd-data.yml
     secrets:
-      token: ${{ secrets.BOT_TOKEN }}
+      token: ${{ secrets.token }}
 
   project_data:
     runs-on: ubuntu-latest
