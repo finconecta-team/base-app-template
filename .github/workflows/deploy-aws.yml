@@ -70,6 +70,8 @@ jobs:
       token: ${{ secrets.token }}
 
   deployment-plan:
+    needs:
+      - data
     environment: ${{ inputs.deployment_name }}
     runs-on: ubuntu-latest
     steps:
@@ -167,6 +169,9 @@ jobs:
             **/*/plan.tfplan
 
   deployment-apply:
+    needs:
+      - data
+      - deployment-plan
     runs-on: ubuntu-latest
     environment: ${{ inputs.deployment_name }}
     steps:
