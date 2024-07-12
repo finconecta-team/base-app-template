@@ -523,6 +523,8 @@ jobs:
             
               if ( isEnabled && (deploy === 'release' || deploy === 'prerelease') )
                 reviewers = deployment['reviewers'] != null ? deployment.reviewers : true;
+              else
+                reviewers = false;
               
               // console.debug("deploy: " + deploy);
               // console.debug('deployment: ' + JSON.stringify(deployment));
