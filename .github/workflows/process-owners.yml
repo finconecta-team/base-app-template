@@ -468,6 +468,30 @@ jobs:
               reviewers.push(rev);
             }
 
+            members_query = `
+              query($login: String!) {
+                organization(login: $login) {
+                  membersWithRole(first: 100) {
+                    nodes {
+                      login
+                      id
+                    }
+                  }
+                }
+              }
+            `
+            const members_result = await github.graphql(members_query, {login: context.repo.owner});
+
+            const reviewers_ids = [];
+            for ( const reviewer_name of reviewers ) {
+              console.log("reviewer_name: " + reviewer_name);
+              reviewer = members_result.organization.membersWithRole.nodes.find( member => member.login === reviewer_name );
+              if ( reviewer != null ) {
+                console.log("reviewer_id" + reviewer.id);
+                reviewers_ids.push(reviewer.id);
+              }
+            }
+
             teams_query = `
               query($login: String!) {
                 organization(login: $login) {
@@ -646,7 +670,7 @@ jobs:
               `;
               env_vars = {
                 environment_id: env_id,
-                reviewers: reviewers,
+                reviewers: reviewers_ids,
                 no_self_review: true
               };
               
@@ -654,7 +678,7 @@ jobs:
               console.debug("env_vars: " + JSON.stringify(env_vars));
               await github.graphql(env_query, env_vars);
             
-              var variable_list = await octokit.rest.actions.listEnvironmentVariables({
+              var variable_list = await github.rest.actions.listEnvironmentVariables({
                 repo_name: context.repo.repo, 
                 owner: context.repo.owner,
                 environment_name: env_name
