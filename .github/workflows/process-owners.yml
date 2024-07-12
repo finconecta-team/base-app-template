@@ -668,7 +668,7 @@ jobs:
                 }
               });
               console.debug("curr_variables: " + JSON.stringify(vars_response));
-              if ( vars_response.status === "200" ) {
+              if ( vars_response.status == 200 ) {
                 for ( const item in vars_response.data.variables ) {
                   console.debug("Variable: " + item.name + " | Value: " + item.value);
                 }
