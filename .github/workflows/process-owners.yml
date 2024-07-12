@@ -468,30 +468,6 @@ jobs:
               reviewers.push(rev);
             }
 
-            members_query = `
-              query($login: String!) {
-                organization(login: $login) {
-                  membersWithRole(first: 100) {
-                    nodes {
-                      login
-                      id
-                    }
-                  }
-                }
-              }
-            `
-            const members_result = await github.graphql(members_query, {login: context.repo.owner});
-
-            const reviewers_ids = [];
-            for ( const reviewer_name of reviewers ) {
-              console.log("reviewer_name: " + reviewer_name);
-              reviewer = members_result.organization.membersWithRole.nodes.find( member => member.login === reviewer_name );
-              if ( reviewer != null ) {
-                console.log("reviewer_id" + reviewer.id);
-                reviewers_ids.push(reviewer.id);
-              }
-            }
-
             teams_query = `
               query($login: String!) {
                 organization(login: $login) {
