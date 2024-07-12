@@ -680,7 +680,10 @@ jobs:
                       repo: context.repo.repo,
                       environment_name: env_key,
                       variable_name: item['name'],
-                      value: variables_list[item['name']],
+                      data: {
+                        name: item['name'],
+                        value: variables_list[item['name']]
+                      },
                       headers: {
                         'X-GitHub-Api-Version': '2022-11-28'
                       }
@@ -690,12 +693,14 @@ jobs:
               } else {
                 for ( const [key, value] of Object.entries(variables_list) ) {
                   console.debug("Creating variable: " + key + " | Value: " + value);
-                  await github.request('PUT /repos/{owner}/{repo}/environments/{environment_name}/variables/{variable_name}', {
+                  await github.request('POST /repos/{owner}/{repo}/environments/{environment_name}/variables', {
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     environment_name: env_key,
-                    variable_name: key,
-                    value: value,
+                    data: {
+                      name: key,
+                      value: value
+                    },
                     headers: {
                       'X-GitHub-Api-Version': '2022-11-28'
                     }
