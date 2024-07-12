@@ -540,7 +540,7 @@ jobs:
                   name: deploy,
                   env: env,
                   targetName: targetName,
-                  reviewers: reviewers ? reviewers_ids : [],
+                  reviewers: reviewers == true ? reviewers_ids : [],
                   variables: variables
                 });
                 
@@ -555,7 +555,7 @@ jobs:
                       name: target,
                       env: target_env,
                       targetName: target_targetName,
-                      reviewers: reviewers ? reviewers_ids : [],
+                      reviewers: reviewers == true ? reviewers_ids : [],
                       variables: variables
                     });
                   }
@@ -595,8 +595,8 @@ jobs:
               const env_name = deploy.name;
               const env_key = deploy.key;
               const targetName = deploy.targetName;
-              const reviewers = deploy.reviewers
-              const variables = deploy.variables
+              const reviewers_list = deploy.reviewers
+              const variables_list = deploy.variables
               
               console.debug("env: " + env_key);
               console.debug('param: ' + JSON.stringify(deploy));
@@ -650,7 +650,7 @@ jobs:
               `;
               env_vars = {
                 environment_id: env_id,
-                reviewers: reviewers_ids,
+                reviewers: reviewers_list,
                 no_self_review: true
               };
               
