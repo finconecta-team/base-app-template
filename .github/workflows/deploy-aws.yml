@@ -119,6 +119,16 @@ jobs:
           cp -pf source/.github/vars/inputs-${{ inputs.environment }}.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/inputs.yaml
           cp -pf source/.github/vars/inputs-global.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/
 
+      - name: Copy Values Bundle
+        run: |
+          mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+          cp -pfR source/.github/values/${{ inputs.environment }}/${{ inputs.release_name }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+
+      - name: Create Hash value for values bundle
+        run: |
+          cd cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+          find values/${{ inputs.release_name }} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ inputs.release_name }}
+
       - name: Generate release.yaml
         run: |
           cat > cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release.yaml << EOF 
