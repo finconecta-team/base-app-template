@@ -238,7 +238,7 @@ jobs:
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
           ls -laR
-          terragrunt apply -no-color plan.tfplan
+          terragrunt --terragrunt-non-interactive apply -no-color plan.tfplan
         continue-on-error: false
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
