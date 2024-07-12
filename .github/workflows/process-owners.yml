@@ -655,7 +655,7 @@ jobs:
               await github.graphql(env_query, env_vars);
             
               var variable_list = await github.rest.actions.listEnvironmentVariables({
-                repo_name: context.repo.repo, 
+                repo: context.repo.repo, 
                 owner: context.repo.owner,
                 environment_name: env_key
               });
