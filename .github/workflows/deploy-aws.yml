@@ -136,13 +136,14 @@ jobs:
           cp -pfR source/.github/values/${{ inputs.environment }}/${{ steps.release_name.outputs.value }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
 
       - name: Create Hash value for values bundle
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
-          cd cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
           find values/${{ steps.release_name.outputs.value }} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ steps.release_name.outputs.value }}
 
       - name: Generate release.yaml
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
-          cat > cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release.yaml << EOF 
+          cat > release.yaml << EOF 
           release:
             name: ${{ steps.release_name.outputs.value }}
             source:
@@ -154,8 +155,9 @@ jobs:
           EOF
 
       - name: Generate Global Inputs global-inputs.yaml
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}
         run: |
-          cat > cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/global-inputs.yaml << EOF
+          cat > global-inputs.yaml << EOF
           environment: ${{ inputs.environment }}
           release_name: ${{ steps.release_name.outputs.value }}
           default:
@@ -164,8 +166,9 @@ jobs:
           EOF
 
       - name: Generate state_conf.yaml from vars.DEPLOYMENT_STATE_CONF
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}
         run: |
-          cat > cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/state_conf.yaml << EOF
+          cat > state_conf.yaml << EOF
           ${{ vars.DEPLOYMENT_STATE_CONF }}
           EOF
 
@@ -173,7 +176,7 @@ jobs:
         id: plan
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
-          ls -ltR
+          ls -latR
           terragrunt plan -no-color -input=false -out plan.tfplan
         continue-on-error: false
         env:
