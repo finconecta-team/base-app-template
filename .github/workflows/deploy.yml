@@ -80,6 +80,10 @@ jobs:
           repo_name=`echo "$GITHUB_REPOSITORY" | cut -f 2 -d "/"`
           echo "owner=$repo_owner" >> $GITHUB_OUTPUT
           echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
+      - name: outputs
+        run: |
+          echo "cloud:      ${{ inputs.target_cloud }}"
+          echo "cloud_type: ${{ inputs.target_cloud_type }}"
 
   deploy-aws-eb:
     uses: ./.github/workflows/deploy-aws.yml
