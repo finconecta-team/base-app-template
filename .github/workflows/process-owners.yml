@@ -597,6 +597,7 @@ jobs:
               const targetName = deploy.targetName;
               const reviewers_list = deploy.reviewers
               const variables_list = deploy.variables
+              const self_review = reviewers_list.length > 0;
               
               console.debug("env: " + env_key);
               console.debug('param: ' + JSON.stringify(deploy));
@@ -651,7 +652,7 @@ jobs:
               env_vars = {
                 environment_id: env_id,
                 reviewers: reviewers_list,
-                no_self_review: true
+                no_self_review: self_review
               };
               
               console.debug("env_query: " + env_query);
