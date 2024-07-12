@@ -197,6 +197,7 @@ jobs:
             cd-${{ inputs.environment }}/**/.values_hash_*
             cd-${{ inputs.environment }}/**/*.yaml
             cd-${{ inputs.environment }}/**/plan.tfplan
+            !cd-${{ inputs.environment }}/**/.terragrunt-cache/**/*
 
   deployment-apply:
     needs:
