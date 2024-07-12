@@ -187,6 +187,7 @@ jobs:
         with:
           token: ${{ secrets.token }}
           name: plan-file
+          retention-days: 1
           path: |
             **/values/**/*
             **/.values_hash_*
