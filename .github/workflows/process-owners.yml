@@ -601,7 +601,7 @@ jobs:
               console.debug('repo_result: ' + JSON.stringify(repo_result));
 
               const env_obj = repo_result.repository.environments.nodes.find( node => node.name === env_key );
-              const env_exists = ( env_obj != null );
+              const env_exists = ( env_obj != null && env_obj != undefined);
               var env_id = null;
               
               env_query = '';
