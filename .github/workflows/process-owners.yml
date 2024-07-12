@@ -645,7 +645,7 @@ jobs:
                 }
               `;
               env_vars = {
-                environment_id: env_obj.environment.id,
+                environment_id: env_id,
                 reviewers: reviewers,
                 no_self_review: true
               };
