@@ -1,2 +1,4 @@
 dns: {}
 beanstalk: {}
+api_gateway: {}
+alarms: {}

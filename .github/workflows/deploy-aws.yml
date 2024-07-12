@@ -72,13 +72,15 @@ jobs:
   deployment-plan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source code
+        uses: actions/checkout@v4
         with:
           path: source
           fetch-depth: 1
           token: ${{ secrets.token }}
 
-      - uses: actions/checkout@v4
+      - name: Checkout Base App Template
+        uses: actions/checkout@v4
         with:
           repository: cloudopsworks/base-app-template
           path: cd-${{ inputs.environment }}
@@ -100,7 +102,8 @@ jobs:
 
       - name: Copy configurations
         run: |
-          cp -p source/.github/vars/inputs-${{ inputs.environment }}.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/input.yaml
+          cp -p source/.github/vars/inputs-${{ inputs.environment }}.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/inputs.yaml
+          cp -p source/.github/vars/inputs-global.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/
 
       - name: Generate release.yaml
         run: |

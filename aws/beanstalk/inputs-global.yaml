@@ -1,0 +1,6 @@
+organization_name: "ORG"
+environment_name: "ENV-NAME"
+namespace: "dev|uat|prod"
+repository_owner: "REPO-OWNER"
+versions_bucket: "VERSION-BUCKET_NAME"
+#logs_bucket: "LOGS-BUCKET_NAME"
