@@ -548,6 +548,7 @@ jobs:
                   const target_deployment = targets[target];
                   const target_env = target_deployment.env;
                   const target_targetName = target_deployment['targetName'];
+                  const target_vars = target_deployment['variables'] != null ? target_deployment.variables : variables;
                   
                   if ( isEnabled ) {
                     deployments_list.push({
@@ -556,7 +557,7 @@ jobs:
                       env: target_env,
                       targetName: target_targetName,
                       reviewers: reviewers == true ? reviewers_ids : [],
-                      variables: variables
+                      variables: target_vars
                     });
                   }
                 }
