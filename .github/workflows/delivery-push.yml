@@ -1,0 +1,85 @@
+name: Delivery Push to Evironment Repo
+
+on:
+  workflow_call:
+    inputs:
+      release_version:
+        required: true
+        type: string
+      release_name:
+        required: false
+        type: string
+      environment:
+        required: true
+        type: string
+      package_name:
+        required: false
+        type: string
+        default: ''
+      package_type:
+        required: false
+        type: string
+        default: ''
+      deployment_name:
+        required: true
+        type: string
+    secrets:
+      token:
+        required: true
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.deployment_name }}
+    steps:
+      # Get the owner repo
+      - name: Get owner
+        id: getowner
+        run: |
+          repo_owner=`echo "$GITHUB_REPOSITORY" | cut -f 1 -d "/"`
+          repo_name=`echo "$GITHUB_REPOSITORY" | cut -f 2 -d "/"`
+          echo "owner=$repo_owner" >> $GITHUB_OUTPUT
+          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
+
+      - name: Build Payload Params
+        id: params
+        uses: actions/github-script@v6
+        with:
+          #result-encoding: string
+          script: |
+            const repo = '${{ steps.getowner.outputs.repo_name }}';
+            const repo_owner = '${{ steps.getowner.outputs.owner }}';
+            const version = '${{ inputs.release_version }}';
+            const rn_in = '${{ inputs.release_name }}';
+            const env = '${{ inputs.environment }}';
+            const package_name = '${{ inputs.package_name }}';
+            const package_type = '${{ inputs.package_type }}';
+            var release_name = repo;
+            if (rn_in !== '') {
+              release_name = rn_in;
+            }
+            const payload = {
+              promote: {
+                repositoryowner: repo_owner,
+                repository: repo,
+                environment: env,
+                version: version,
+                releasename: release_name,
+                packagename: package_name,
+                packagetype: package_type
+              }
+            };
+            console.log(JSON.stringify(payload));
+            return payload;
+
+      # Send event to repository to launch new promotion
+      - name: Send Event to Environment Repository
+        id: send_event
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: "${{ secrets.token }}"
+          repository: ${{ steps.getowner.outputs.owner }}/environment-${{ steps.getowner.outputs.owner }}-${{ inputs.environment }}
+          event-type: promote-environment
+          client-payload: ${{ steps.params.outputs.result }}
+

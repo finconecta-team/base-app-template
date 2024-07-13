@@ -667,8 +667,8 @@ jobs:
                   'X-GitHub-Api-Version': '2022-11-28'
                 }
               });
-              console.debug("curr_variables: " + JSON.stringify(vars_response));
-              console.debug("variables_list: " + JSON.stringify(variables_list));
+              //console.debug("curr_variables: " + JSON.stringify(vars_response));
+              //console.debug("variables_list: " + JSON.stringify(variables_list));
               if ( vars_response.status == 200 && vars_response.data.total_count > 0 ) {
                 console.debug("vars JSON: " + JSON.stringify(vars_response.data.variables));
                 for ( const item of vars_response.data.variables ) {
