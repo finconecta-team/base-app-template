@@ -28,8 +28,8 @@ inputs = {
   }
   repository_owner = local.base_vars.repository_owner
   namespace        = local.base_vars.namespace
-  versions_bucket  = local.base_vars.versions_bucket
-  logs_bucket      = try(local.base_vars.logs_bucket, "")
+  versions_bucket  = local.local_vars.versions_bucket
+  logs_bucket      = try(local.local_vars.logs_bucket, "")
   region           = local.global_vars.default.region
   sts_assume_role  = local.global_vars.default.sts_role_arn
   beanstalk        = local.local_vars.beanstalk
