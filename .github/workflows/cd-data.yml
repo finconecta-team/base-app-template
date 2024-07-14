@@ -235,6 +235,6 @@ jobs:
             core.setOutput('isEnabled', isEnabled);
             core.setOutput('hasQualifier', hasQualifier);
             core.setOutput('deploymentName', deploymentName);
-            core.setoutput('deliveryPush', deliveryPush);
+            core.setOutput('deliveryPush', deliveryPush);
 
             return outputV;
