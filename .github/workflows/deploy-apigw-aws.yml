@@ -172,7 +172,7 @@ jobs:
                     x-amazon-apigateway-authtype: (authorizer.authtype === 'lambda') ? 'custom' : authorizer.authtype,
                     x-amazon-apigateway-authorizer: {
                       authorizerUri: authorizer.lambda.uri,
-                      authorizerCredentials: authorizer.lambda.exec-role,
+                      authorizerCredentials: authorizer.lambda.exec_role,
                       identitySource: 'method.request.header.Authorization',
                       authorizerResultTtlInSeconds: 0,
                       type: 'request'
@@ -192,7 +192,7 @@ jobs:
                   x-amazon-apigateway-authtype: (authorizer.authtype === 'lambda') ? 'custom' : authorizer.authtype,
                   x-amazon-apigateway-authorizer: {
                     authorizerUri: authorizer.lambda.uri,
-                    authorizerCredentials: authorizer.lambda.exec-role,
+                    authorizerCredentials: authorizer.lambda.exec_role,
                     identitySource: 'method.request.header.Authorization',
                     authorizerResultTtlInSeconds: 0,
                     type: 'request'
