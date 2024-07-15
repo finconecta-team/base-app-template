@@ -34,6 +34,9 @@ on:
       target_cloud_type:
         required: true
         type: string
+      apis_enabled:
+        required: true
+        type: boolean
       DOCKER_REGISTRY_ADDRESS:
         required: false
         type: string
@@ -62,11 +65,6 @@ on:
         required: false
 
 jobs:
-  data:
-    uses: ./.github/workflows/cd-data.yml
-    secrets:
-      token: ${{ secrets.token }}
-
   project_data:
     runs-on: ubuntu-latest
     outputs:
@@ -141,3 +139,35 @@ jobs:
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
     secrets: inherit
+
+  deploy-apigw-aws:
+    uses: ./.github/workflows/deploy-apigw-aws.yml
+    if: ${{ inputs.target_cloud == 'AWS' && inputs.apis_enabled == true }}
+    with:
+      release_version: ${{ inputs.release_version }}
+      release_name: ${{ inputs.release_name }}
+      environment: ${{ inputs.environment }}
+      package_name: ${{ inputs.package_name }}
+      package_type: ${{ inputs.package_type }}
+      deployment_name: ${{ inputs.deployment_name }}
+      target_cloud: "aws"
+      BOT_USER: ${{ inputs.BOT_USER }}
+      BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
+      AWS_REGION: ${{ inputs.AWS_REGION }}
+    secrets: inherit
+
+#  deploy-apim-azure:
+#    uses: ./.github/workflows/deploy-apim-azure.yml
+#    if: ${{ inputs.target_cloud == 'AZURE' && inputs.apis_enabled == true }}
+#    with:
+#      release_version: ${{ inputs.release_version }}
+#      release_name: ${{ inputs.release_name }}
+#      environment: ${{ inputs.environment }}
+#      package_name: ${{ inputs.package_name }}
+#      package_type: ${{ inputs.package_type }}
+#      deployment_name: ${{ inputs.deployment_name }}
+#      target_cloud: "azure"
+#      BOT_USER: ${{ inputs.BOT_USER }}
+#      BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
+#      AWS_REGION: ${{ inputs.AWS_REGION }}
+#    secrets: inherit

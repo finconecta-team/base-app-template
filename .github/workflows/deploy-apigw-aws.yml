@@ -3,7 +3,7 @@
 #            On GitHub: https://github.com/cloudopsworks
 #            Distributed Under Apache v2.0 License
 #
-name: Deploy to AWS Elastic Beanstalk
+name: Deploy to AWS API Gateway
 on:
   workflow_call:
     inputs:
@@ -29,15 +29,6 @@ on:
         type: string
       target_cloud:
         required: true
-        type: string
-      target_cloud_type:
-        required: true
-        type: string
-      DOCKER_REGISTRY_ADDRESS:
-        required: false
-        type: string
-      HELM_REGISTRY_ADDRESS:
-        required: false
         type: string
       BOT_USER:
         required: true
@@ -119,21 +110,100 @@ jobs:
 
       - name: Copy configurations
         run: |
-          cp -pf source/.github/vars/inputs-${{ inputs.environment }}.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/inputs.yaml
-          cp -pf source/.github/vars/inputs-global.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/
+          cp -pf source/.github/vars/apigw/apis-${{ inputs.environment }}.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/inputs.yaml
+          cp -pf source/.github/vars/apigw/apis-global.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/inputs-apis.yaml
+          cp -pf source/.github/vars/inputs-global.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/inputs-global.yaml
 
-      - name: Copy Values Bundle
+      - name: Copy API Files Bundle
         run: |
-          mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
-          cp -pfR source/.github/values/${{ inputs.environment }}/${{ steps.release_name.outputs.value }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+          mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/apifiles/
 
-      - name: Create Hash value for values bundle
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
-        run: |
-          find values/${{ steps.release_name.outputs.value }} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ steps.release_name.outputs.value }}
+      - name: Process all API Files
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.token }}
+          script: |
+            // Load the following YAML files as objects: inputs.yaml and intputs-apis.yaml
+            const fs = require('fs');
+            const yaml = require('js-yaml');
+            const inputs = yaml.load(fs.readFileSync('cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/inputs.yaml', 'utf8'));
+            const apis = yaml.load(fs.readFileSync('cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/inputs-apis.yaml', 'utf8'));
+            
+            // Process all API files in apifiles folder
+            const path = 'source/apifiles/';
+            const path_out = 'cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/apifiles/';
+            const files = fs.readdirSync(path);
+            for (const file of files) {
+              // determine if it is YAML file or JSON file use a variable for later decision
+              const is_yaml = file.endsWith('.yaml');
+              const is_json = file.endsWith('.json');
+              if (!is_yaml && !is_json) {
+                console.log(`Skipping ${file} as it is not a YAML or JSON file`);
+                continue;
+              }
+              var fext = is_yaml ? '.yaml' : '.json';
+              const api = apis.apis.find(api => api.apisource === file.replace(fext, ''));
+              if (!api) {
+                console.log(`API definition not found for ${file}`);
+                continue;
+              }
+              console.log(`Processing ${file} for ${api.name}`);
+              const content = fs.readFileSync(`${path}${file}`, 'utf8');
+              var apiContent = {};
+              if (is_json) {
+                apiContent = JSON.parse(content);
+              } else {
+                apiContent = yaml.load(content);
+              }
+              
+              // From inputs.yaml, get the mappings for aws: section to process the authorizers
+              const authorizers = inputs.aws.authorizers;
+              // Iterate all authorizers lookup if the authorizer is already defined in the API content securitySchemes as entry
+              // if already exists modify the entry, if not found insert the authorizer in the API content securitySchemes
+              for (const authorizer of authorizers) {
+                if (apiContent.components.securitySchemes && apiContent.components.securitySchemes[authorizer.name]) {
+                  console.log(`Authorizer ${authorizer.name} found in ${file}`);
+                  // If found, modify the entry
+                  apiContent.components.securitySchemes[authorizer.name] = {
+                    name: 'Authorization',
+                    type: (authorizer.authtype === 'lambda') ? 'apiKey' : authorizer.authtype,
+                    in: 'header',
+                    x-amazon-apigateway-authtype: (authorizer.authtype === 'lambda') ? 'custom' : authorizer.authtype,
+                    x-amazon-apigateway-authorizer: {
+                      authorizerUri: authorizer.lambda.uri,
+                      authorizerCredentials: authorizer.lambda.exec-role,
+                      identitySource: 'method.request.header.Authorization',
+                      authorizerResultTtlInSeconds: 0,
+                      type: 'request'
+                    }
+                  };
+                  continue;
+                }
+                console.log(`Authorizer ${authorizer.name} not found in ${file}`);
+                // If not found, insert the authorizer in the API content securitySchemes
+                if (!apiContent.components.securitySchemes) {
+                  apiContent.components.securitySchemes = {};
+                }
+                apiContent.components.securitySchemes[authorizer.name] = {
+                  name: 'Authorization',
+                  type: (authorizer.authtype === 'lambda') ? 'apiKey' : authorizer.authtype,
+                  in: 'header',
+                  x-amazon-apigateway-authtype: (authorizer.authtype === 'lambda') ? 'custom' : authorizer.authtype,
+                  x-amazon-apigateway-authorizer: {
+                    authorizerUri: authorizer.lambda.uri,
+                    authorizerCredentials: authorizer.lambda.exec-role,
+                    identitySource: 'method.request.header.Authorization',
+                    authorizerResultTtlInSeconds: 0,
+                    type: 'request'
+                  }
+                };
+              }
+              // Write the modified API content as JSON back into destination apifiles
+              fs.writeFileSync(`${path_out}${api.name}.json`, JSON.stringify(apiContent, null, 2));
+            }
 
       - name: Generate release.yaml
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
         run: |
           cat > release.yaml << EOF 
           release:
@@ -166,15 +236,12 @@ jobs:
 
       - name: Terragrunt Plan
         id: plan
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
         run: terragrunt --terragrunt-non-interactive plan -no-color -input=false
         continue-on-error: false
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          HELM_CREDS_USER: ${{ secrets.AZURE_SERVICE_ID }}
-          HELM_CREDS_PASSWORD: ${{ secrets.AZURE_SERVICE_SECRET }}
-          HELM_EXPERIMENTAL_OCI: "1"
           GITHUB_API_TOKEN: ${{ secrets.token }}
 
       - name: Save Plan File
@@ -183,8 +250,7 @@ jobs:
           name: plan-file
           retention-days: 1
           path: |
-            cd-${{ inputs.environment }}/**/values/**/*
-            cd-${{ inputs.environment }}/**/.values_hash_*
+            cd-${{ inputs.environment }}/**/apifiles/**/*
             cd-${{ inputs.environment }}/**/*.yaml
             cd-${{ inputs.environment }}/**/plan.tfplan
             !cd-${{ inputs.environment }}/**/.terragrunt-cache/**/*
@@ -224,13 +290,10 @@ jobs:
 
       - name: Terragrunt Apply
         id: apply
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
         run: terragrunt --terragrunt-non-interactive apply -no-color plan.tfplan
         continue-on-error: false
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          HELM_CREDS_USER: ${{ secrets.AZURE_SERVICE_ID }}
-          HELM_CREDS_PASSWORD: ${{ secrets.AZURE_SERVICE_SECRET }}
-          HELM_EXPERIMENTAL_OCI: "1"
           GITHUB_API_TOKEN: ${{ secrets.token }}
