@@ -67,7 +67,7 @@ env:
 jobs:
   deployment-plan:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: ${{ inputs.deployment_name }}
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -151,7 +151,7 @@ jobs:
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}
         run: |
           cat > global-inputs.yaml << EOF
-          environment: ${{ inputs.environment }}
+          environment: ${{ inputs.deployment_name }}
           release_name: ${{ steps.release_name.outputs.value }}
           default:
             region: ${{ vars.DEPLOYMENT_AWS_REGION }}
@@ -194,7 +194,7 @@ jobs:
     needs:
       - deployment-plan
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: ${{ inputs.deployment_name }}
     steps:
       - name: Checkout Base App Template
         uses: actions/checkout@v4
