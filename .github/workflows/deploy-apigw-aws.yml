@@ -58,6 +58,7 @@ env:
 jobs:
   deployment-plan:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -259,6 +260,7 @@ jobs:
     needs:
       - deployment-plan
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     steps:
       - name: Checkout Base App Template
         uses: actions/checkout@v4
