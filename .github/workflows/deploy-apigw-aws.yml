@@ -162,22 +162,25 @@ jobs:
               // Iterate all authorizers lookup if the authorizer is already defined in the API content securitySchemes as entry
               // if already exists modify the entry, if not found insert the authorizer in the API content securitySchemes
               for (const authorizer of authorizers) {
+                const obj = {
+                  name: 'Authorization',
+                  type: (authorizer.authtype === 'lambda') ? 'apiKey' : authorizer.authtype,
+                  in: 'header'
+                };
+                obj['x-amazon-apigateway-authtype'] = (authorizer.authtype === 'lambda') ? 'custom' : authorizer.authtype;
+                obj['x-amazon-apigateway-authorizer'] = {
+                  authorizerUri: authorizer.lambda.uri,
+                  authorizerCredentials: authorizer.lambda.exec_role,
+                  identitySource: 'method.request.header.Authorization',
+                  authorizerResultTtlInSeconds: 0,
+                  type: 'request'
+                };
+
                 if (apiContent.components.securitySchemes && apiContent.components.securitySchemes[authorizer.name]) {
                   console.log(`Authorizer ${authorizer.name} found in ${file}`);
+
                   // If found, modify the entry
-                  apiContent.components.securitySchemes[authorizer.name] = {
-                    name: 'Authorization',
-                    type: (authorizer.authtype === 'lambda') ? 'apiKey' : authorizer.authtype,
-                    in: 'header',
-                    x-amazon-apigateway-authtype: (authorizer.authtype === 'lambda') ? 'custom' : authorizer.authtype,
-                    x-amazon-apigateway-authorizer: {
-                      authorizerUri: authorizer.lambda.uri,
-                      authorizerCredentials: authorizer.lambda.exec_role,
-                      identitySource: 'method.request.header.Authorization',
-                      authorizerResultTtlInSeconds: 0,
-                      type: 'request'
-                    }
-                  };
+                  apiContent.components.securitySchemes[authorizer.name] = obj;
                   continue;
                 }
                 console.log(`Authorizer ${authorizer.name} not found in ${file}`);
@@ -185,19 +188,7 @@ jobs:
                 if (!apiContent.components.securitySchemes) {
                   apiContent.components.securitySchemes = {};
                 }
-                apiContent.components.securitySchemes[authorizer.name] = {
-                  name: 'Authorization',
-                  type: (authorizer.authtype === 'lambda') ? 'apiKey' : authorizer.authtype,
-                  in: 'header',
-                  x-amazon-apigateway-authtype: (authorizer.authtype === 'lambda') ? 'custom' : authorizer.authtype,
-                  x-amazon-apigateway-authorizer: {
-                    authorizerUri: authorizer.lambda.uri,
-                    authorizerCredentials: authorizer.lambda.exec_role,
-                    identitySource: 'method.request.header.Authorization',
-                    authorizerResultTtlInSeconds: 0,
-                    type: 'request'
-                  }
-                };
+                apiContent.components.securitySchemes[authorizer.name] = obj;
               }
               // Write the modified API content as JSON back into destination apifiles
               fs.writeFileSync(`${path_out}${api.name}.json`, JSON.stringify(apiContent, null, 2));
