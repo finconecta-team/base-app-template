@@ -455,6 +455,7 @@ jobs:
             await github.graphql(protection_rule, vars);
 
       - name: Advanced Deployment Environments Creation
+        id: envs
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.token }}
@@ -710,3 +711,29 @@ jobs:
               }
             }
             
+            const env_key_list = []
+            for ( const index in deployments_list ) {
+              const deploy = deployments_list[index];
+              const env_name = deploy.name;
+              const env_key = deploy.key;
+              env_key_list.push(env_key);
+            }
+            const env_key_ordered_list =Array.from(env_key_list).sort();
+            core.setOutput('env_list', JSON.stringify(env_key_ordered_list));
+
+      # Modify deploy YML wit yq command in order to insert the output from terragrunt_folders script
+      # into the deploy.yml file on the yaml address: on.workflow_dispatch.inputs.working_directory.options
+      - name: Modify destroy-environment.yml with env_list
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -i '.on.workflow_dispatch.inputs.destroyedDeploymentName.options = ${{ steps.envs.outputs.env_list }}' .github/workflows/destroy-environment.yml
+
+      # Push the change to the repository using plain git commands
+      - name: Push Deploy Workflow
+        continue-on-error: true
+        run: |
+          git config --global user.name "${{ vars.BOT_USER }}"
+          git config --global user.email "${{ vars.BOT_EMAIL }}"
+          git add .github/workflows/destroy-environment.yml
+          git commit -m "chore: Update destroy-environment.yml with all environments set"
+          git push origin ${{ github.head_ref }}
