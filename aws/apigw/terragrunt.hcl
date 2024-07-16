@@ -27,7 +27,7 @@ inputs = {
     environment_name  = local.base_vars.environment_name
     environment_type  = local.base_vars.namespace
   }
-  provider         = local.apis_vars.provider
+  cloud_provider   = local.apis_vars.provider
   apis             = local.apis_vars.apis
   api_files_dir     = try(local.global_vars.api_files_dir, "apifiles/")
   environment      = local.local_vars.environment
