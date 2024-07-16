@@ -3,10 +3,14 @@
 #            On GitHub: https://github.com/cloudopsworks
 #            Distributed Under Apache v2.0 License
 #
-name: Deploy to AWS API Gateway
+name: Deploy to AWS Elastic Beanstalk
 on:
   workflow_call:
     inputs:
+      destroy:
+        required: false
+        type: boolean
+        default: false
       release_version:
         required: true
         type: string
@@ -29,6 +33,15 @@ on:
         type: string
       target_cloud:
         required: true
+        type: string
+      target_cloud_type:
+        required: true
+        type: string
+      DOCKER_REGISTRY_ADDRESS:
+        required: false
+        type: string
+      HELM_REGISTRY_ADDRESS:
+        required: false
         type: string
       BOT_USER:
         required: true
@@ -83,7 +96,7 @@ jobs:
           repo_owner=`echo "$GITHUB_REPOSITORY" | cut -f 1 -d "/"`
           repo_name=`echo "$GITHUB_REPOSITORY" | cut -f 2 -d "/"`
           echo "owner=$repo_owner" >> $GITHUB_OUTPUT
-          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT          
+          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
 
       - name: Set Final Release Name
         id: release_name
@@ -111,17 +124,21 @@ jobs:
 
       - name: Copy configurations
         run: |
-          cp -pf source/.github/vars/apigw/apis-${{ inputs.environment }}.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/inputs.yaml
-          cp -pf source/.github/vars/apigw/apis-global.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/inputs-apis.yaml
-          cp -pf source/.github/vars/inputs-global.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/inputs-global.yaml
+          cp -pf source/.github/vars/inputs-${{ inputs.environment }}.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/inputs.yaml
+          cp -pf source/.github/vars/inputs-global.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/
 
-      - name: Copy API Files Bundle
+      - name: Copy Values Bundle
         run: |
-          mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/apifiles/
-          cp -pfR source/apifiles/* cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/apifiles/
+          mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+          cp -pfR source/.github/values/${{ inputs.environment }}/${{ steps.release_name.outputs.value }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+
+      - name: Create Hash value for values bundle
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          find values/${{ steps.release_name.outputs.value }} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ steps.release_name.outputs.value }}
 
       - name: Generate release.yaml
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
           cat > release.yaml << EOF 
           release:
@@ -152,23 +169,41 @@ jobs:
           ${{ vars.DEPLOYMENT_STATE_CONF }}
           EOF
 
+      - name: Determine Plan Action
+        uses: actions/github-script@v7
+        id: plan_action
+        with:
+          script: |
+            const is_destroy = ${{ inputs.destroy }};
+            if (is_destroy) {
+              core.setOutput('value', 'plan -destroy')
+              console.log('destroy');
+            } else {
+              core.setOutput('value', 'plan')
+              console.log('apply');
+            }
+
       - name: Terragrunt Plan
         id: plan
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
-        run: terragrunt --terragrunt-non-interactive plan -no-color -input=false
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: terragrunt --terragrunt-non-interactive ${{ steps.plan_action.outputs.value }} -no-color -input=false
         continue-on-error: false
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          HELM_CREDS_USER: ${{ secrets.AZURE_SERVICE_ID }}
+          HELM_CREDS_PASSWORD: ${{ secrets.AZURE_SERVICE_SECRET }}
+          HELM_EXPERIMENTAL_OCI: "1"
           GITHUB_API_TOKEN: ${{ secrets.token }}
 
       - name: Save Plan File
         uses: actions/upload-artifact@v4
         with:
-          name: plan-file-aws-apigw
+          name: plan-file-aws-beanstalk
           retention-days: 1
           path: |
-            cd-${{ inputs.environment }}/**/apifiles/**/*
+            cd-${{ inputs.environment }}/**/values/**/*
+            cd-${{ inputs.environment }}/**/.values_hash_*
             cd-${{ inputs.environment }}/**/*.yaml
             cd-${{ inputs.environment }}/**/plan.tfplan
             !cd-${{ inputs.environment }}/**/.terragrunt-cache/**/*
@@ -191,7 +226,7 @@ jobs:
       - name: Restore Plan File
         uses: actions/download-artifact@v4
         with:
-          name: plan-file-aws-apigw
+          name: plan-file-aws-beanstalk
           path: cd-${{ inputs.environment }}
 
       - name: Setup OpenTofu
@@ -209,10 +244,13 @@ jobs:
 
       - name: Terragrunt Apply
         id: apply
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: terragrunt --terragrunt-non-interactive apply -no-color plan.tfplan
         continue-on-error: false
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          HELM_CREDS_USER: ${{ secrets.AZURE_SERVICE_ID }}
+          HELM_CREDS_PASSWORD: ${{ secrets.AZURE_SERVICE_SECRET }}
+          HELM_EXPERIMENTAL_OCI: "1"
           GITHUB_API_TOKEN: ${{ secrets.token }}

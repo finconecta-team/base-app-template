@@ -83,10 +83,11 @@ jobs:
           echo "cloud:      ${{ inputs.target_cloud }}"
           echo "cloud_type: ${{ inputs.target_cloud_type }}"
 
-  deploy-aws-eb:
+  destroy-aws-eb:
     uses: ./.github/workflows/terragrunt-aws.yml
     if: ${{ inputs.target_cloud == 'AWS' && ( inputs.target_cloud_type == 'eb' || inputs.target_cloud_type == 'elasticbeanstalk' ) }}
     with:
+      destroy: true
       release_version: ${{ inputs.release_version }}
       release_name: ${{ inputs.release_name }}
       environment: ${{ inputs.environment }}
@@ -102,10 +103,11 @@ jobs:
       AWS_REGION: ${{ inputs.AWS_REGION }}
     secrets: inherit
 
-  deploy-aws-eks:
+  destroy-aws-eks:
     uses: ./.github/workflows/terragrunt-aws.yml
     if: ${{ inputs.target_cloud == 'AWS' && ( inputs.target_cloud_type == 'kubernetes' || inputs.target_cloud_type == 'eks' ) }}
     with:
+      destroy: true
       release_version: ${{ inputs.release_version }}
       release_name: ${{ inputs.release_name }}
       environment: ${{ inputs.environment }}
@@ -121,10 +123,11 @@ jobs:
       AWS_REGION: ${{ inputs.AWS_REGION }}
     secrets: inherit
 
-  deploy-aws-lambda:
+  destroy-aws-lambda:
     uses: ./.github/workflows/terragrunt-aws.yml
     if: ${{ inputs.target_cloud == 'AWS' && inputs.target_cloud_type == 'lambda' }}
     with:
+      destroy: true
       release_version: ${{ inputs.release_version }}
       release_name: ${{ inputs.release_name }}
       environment: ${{ inputs.environment }}
@@ -140,10 +143,11 @@ jobs:
       AWS_REGION: ${{ inputs.AWS_REGION }}
     secrets: inherit
 
-  deploy-apigw-aws:
+  destroy-apigw-aws:
     uses: ./.github/workflows/terragrunt-apigw-aws.yml
     if: ${{ inputs.target_cloud == 'AWS' && inputs.apis_enabled == true }}
     with:
+      destroy: true
       release_version: ${{ inputs.release_version }}
       release_name: ${{ inputs.release_name }}
       environment: ${{ inputs.environment }}
@@ -156,8 +160,8 @@ jobs:
       AWS_REGION: ${{ inputs.AWS_REGION }}
     secrets: inherit
 
-#  deploy-apim-azure:
-#    uses: ./.github/workflows/deploy-apim-azure.yml
+#  destroy-apim-azure:
+#    uses: ./.github/workflows/destroy-apim-azure.yml
 #    if: ${{ inputs.target_cloud == 'AZURE' && inputs.apis_enabled == true }}
 #    with:
 #      release_version: ${{ inputs.release_version }}
