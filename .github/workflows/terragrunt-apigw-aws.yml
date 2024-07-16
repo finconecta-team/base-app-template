@@ -87,7 +87,7 @@ jobs:
           repo_owner=`echo "$GITHUB_REPOSITORY" | cut -f 1 -d "/"`
           repo_name=`echo "$GITHUB_REPOSITORY" | cut -f 2 -d "/"`
           echo "owner=$repo_owner" >> $GITHUB_OUTPUT
-          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT          
+          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
 
       - name: Set Final Release Name
         id: release_name
@@ -156,10 +156,24 @@ jobs:
           ${{ vars.DEPLOYMENT_STATE_CONF }}
           EOF
 
+      - name: Determine Plan Action
+        uses: actions/github-script@v7
+        id: plan_action
+        with:
+          script: |
+            const is_destroy = ${{ inputs.destroy }};
+            if (is_destroy) {
+              core.setOutput('value', 'plan -destroy')
+              console.log('destroy');
+            } else {
+              core.setOutput('value', 'plan')
+              console.log('apply');
+            }
+
       - name: Terragrunt Plan
         id: plan
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
-        run: terragrunt --terragrunt-non-interactive plan -no-color -input=false
+        run: terragrunt --terragrunt-non-interactive ${{ steps.plan_action.outputs.value }} -no-color -input=false
         continue-on-error: false
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

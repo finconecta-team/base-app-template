@@ -199,7 +199,7 @@ jobs:
       - name: Save Plan File
         uses: actions/upload-artifact@v4
         with:
-          name: plan-file-aws-beanstalk
+          name: plan-file-aws-${{ inputs.target_cloud_type }}
           retention-days: 1
           path: |
             cd-${{ inputs.environment }}/**/values/**/*
@@ -226,7 +226,7 @@ jobs:
       - name: Restore Plan File
         uses: actions/download-artifact@v4
         with:
-          name: plan-file-aws-beanstalk
+          name: plan-file-aws-${{ inputs.target_cloud_type }}
           path: cd-${{ inputs.environment }}
 
       - name: Setup OpenTofu
