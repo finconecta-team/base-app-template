@@ -83,7 +83,7 @@ jobs:
           repo_owner=`echo "$GITHUB_REPOSITORY" | cut -f 1 -d "/"`
           repo_name=`echo "$GITHUB_REPOSITORY" | cut -f 2 -d "/"`
           echo "owner=$repo_owner" >> $GITHUB_OUTPUT
-          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
+          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT          
 
       - name: Set Final Release Name
         id: release_name
@@ -118,89 +118,7 @@ jobs:
       - name: Copy API Files Bundle
         run: |
           mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/apifiles/
-
-      - name: Setup Node 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-
-      - name: Run NPM install
-        run: npm install js-yaml
-
-      - name: Process all API Files
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.token }}
-          script: |
-            // Load the following YAML files as objects: inputs.yaml and intputs-apis.yaml
-            const fs = require('fs');
-            const yaml = require('js-yaml');
-            const inputs = yaml.load(fs.readFileSync('cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/inputs.yaml', 'utf8'));
-            const apis = yaml.load(fs.readFileSync('cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/inputs-apis.yaml', 'utf8'));
-            
-            // Process all API files in apifiles folder
-            const path = 'source/apifiles/';
-            const path_out = 'cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/apifiles/';
-            const files = fs.readdirSync(path);
-            for (const file of files) {
-              // determine if it is YAML file or JSON file use a variable for later decision
-              const is_yaml = file.endsWith('.yaml');
-              const is_json = file.endsWith('.json');
-              if (!is_yaml && !is_json) {
-                console.log(`Skipping ${file} as it is not a YAML or JSON file`);
-                continue;
-              }
-              var fext = is_yaml ? '.yaml' : '.json';
-              const api = apis.apis.find(api => api.apisource === file.replace(fext, ''));
-              if (!api) {
-                console.log(`API definition not found for ${file}`);
-                continue;
-              }
-              console.log(`Processing ${file} for ${api.name}`);
-              const content = fs.readFileSync(`${path}${file}`, 'utf8');
-              var apiContent = {};
-              if (is_json) {
-                apiContent = JSON.parse(content);
-              } else {
-                apiContent = yaml.load(content);
-              }
-              
-              // From inputs.yaml, get the mappings for aws: section to process the authorizers
-              const authorizers = inputs.aws.authorizers;
-              // Iterate all authorizers lookup if the authorizer is already defined in the API content securitySchemes as entry
-              // if already exists modify the entry, if not found insert the authorizer in the API content securitySchemes
-              for (const authorizer of authorizers) {
-                const obj = {
-                  name: 'Authorization',
-                  type: (authorizer.authtype === 'lambda') ? 'apiKey' : authorizer.authtype,
-                  in: 'header'
-                };
-                obj['x-amazon-apigateway-authtype'] = (authorizer.authtype === 'lambda') ? 'custom' : authorizer.authtype;
-                obj['x-amazon-apigateway-authorizer'] = {
-                  authorizerUri: authorizer.lambda.uri,
-                  authorizerCredentials: authorizer.lambda.exec_role,
-                  identitySource: 'method.request.header.Authorization',
-                  authorizerResultTtlInSeconds: 0,
-                  type: 'request'
-                };
-
-                if (apiContent.components.securitySchemes && apiContent.components.securitySchemes[authorizer.name]) {
-                  console.log(`Authorizer ${authorizer.name} found in ${file}`);
-
-                  // If found, modify the entry
-                  apiContent.components.securitySchemes[authorizer.name] = obj;
-                  continue;
-                }
-                console.log(`Authorizer ${authorizer.name} not found in ${file}`);
-                // If not found, insert the authorizer in the API content securitySchemes
-                if (!apiContent.components.securitySchemes) {
-                  apiContent.components.securitySchemes = {};
-                }
-                apiContent.components.securitySchemes[authorizer.name] = obj;
-              }
-              // Write the modified API content as JSON back into destination apifiles
-              fs.writeFileSync(`${path_out}${api.name}.json`, JSON.stringify(apiContent, null, 2));
-            }
+          cp -pfR source/apifiles/* cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/apifiles/
 
       - name: Generate release.yaml
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
