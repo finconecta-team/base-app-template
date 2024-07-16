@@ -205,7 +205,7 @@ jobs:
 
       - name: Terragrunt Plan to JSON
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
-        run: terragrunt --terragrunt-non-interactive show -json plan.tfplan > tfplan.json -no-color -input=false
+        run: terragrunt --terragrunt-non-interactive show -json plan.tfplan > tfplan.json
         continue-on-error: true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
