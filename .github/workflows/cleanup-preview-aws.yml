@@ -155,7 +155,7 @@ jobs:
                   
       - name: Report Preview deployment and URL
         if: steps.pipeline_helm.outputs.result == 1
-        uses: actions/github-script@7
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.BOT_TOKEN }}
           script: |

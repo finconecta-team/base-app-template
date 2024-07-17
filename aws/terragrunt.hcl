@@ -7,7 +7,7 @@
 terraform {
   extra_arguments "plan_file" {
     commands  = ["plan"]
-    arguments = ["-out=${get_terragrunt_dir()}/tfplan.out"]
+    arguments = ["-out=${get_terragrunt_dir()}/plan.tfplan"]
   }
 }
 # load local variables from state_conf.yaml
@@ -45,7 +45,7 @@ remote_state {
     encrypt              = true
     kms_key_id           = local.state_conf.s3.kms_key_id
     dynamodb_table       = local.state_conf.s3.dynamodb_table
-    key                  = "${basename(get_repo_root())}/${local.global_vars.environment}/${local.global_vars.release_name}/${path_relative_to_include()}/terraform.tfstate"
+    key                  = "deployments/${local.global_vars.environment}/${local.global_vars.release_name}/${path_relative_to_include()}/terraform.tfstate"
   }
 }
 

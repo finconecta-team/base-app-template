@@ -1,2 +1,6 @@
+versions_bucket: "VERSION-BUCKET_NAME"
+#logs_bucket: "LOGS-BUCKET_NAME"
 dns: {}
 beanstalk: {}
+api_gateway: {}
+alarms: {}

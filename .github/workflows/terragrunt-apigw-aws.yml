@@ -1,0 +1,256 @@
+##
+# (c) 2022-2024 - Cloud Ops Works LLC - https://cloudops.works/
+#            On GitHub: https://github.com/cloudopsworks
+#            Distributed Under Apache v2.0 License
+#
+name: Deploy to AWS API Gateway
+on:
+  workflow_call:
+    inputs:
+      destroy:
+        required: false
+        type: boolean
+        default: false
+      release_version:
+        required: true
+        type: string
+      release_name:
+        required: false
+        type: string
+      environment:
+        required: true
+        type: string
+      package_name:
+        required: false
+        type: string
+        default: ''
+      package_type:
+        required: false
+        type: string
+        default: ''
+      deployment_name:
+        required: true
+        type: string
+      target_cloud:
+        required: true
+        type: string
+      BOT_USER:
+        required: true
+        type: string
+      BOT_EMAIL:
+        required: true
+        type: string
+      AWS_REGION:
+        required: false
+        type: string
+    secrets:
+      token:
+        required: true
+      AWS_ACCESS_KEY_ID:
+        required: false
+      AWS_SECRET_ACCESS_KEY:
+        required: false
+      AZURE_SERVICE_ID:
+        required: false
+      AZURE_SERVICE_SECRET:
+        required: false
+
+env:
+  tofu_version: 1.7.1
+  tg_version: 0.59.5
+  base_app_version: 3
+  tf_summarize_version: 0.3.10
+jobs:
+  deployment-plan:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.deployment_name }}
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          path: source
+          fetch-depth: 1
+          token: ${{ secrets.token }}
+
+      - name: Checkout Base App Template
+        uses: actions/checkout@v4
+        with:
+          repository: cloudopsworks/base-app-template
+          path: cd-${{ inputs.environment }}
+          fetch-depth: 1
+          ref: v${{ env.base_app_version }}
+          token: ${{ secrets.token }}
+
+      # Get the owner repo
+      - name: Get owner
+        id: getowner
+        run: |
+          repo_owner=`echo "$GITHUB_REPOSITORY" | cut -f 1 -d "/"`
+          repo_name=`echo "$GITHUB_REPOSITORY" | cut -f 2 -d "/"`
+          echo "owner=$repo_owner" >> $GITHUB_OUTPUT
+          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
+
+      - name: Set Final Release Name
+        id: release_name
+        run: |
+          REL=
+          if [ -z "${{ inputs.release_name }}" ]; then
+            REL="${{ steps.getowner.outputs.repo_name }}"
+          else
+            REL="${{ inputs.release_name }}"
+          fi
+          echo "value=$REL" >> $GITHUB_OUTPUT
+
+      - name: Terraform Plan prettifier
+        uses: kishaningithub/setup-tf-summarize@v2
+        with:
+          github-token: ${{ secrets.BOT_TOKEN }}
+          tf-summarize-version: v${{ env.tf_summarize_version }}
+
+      - name: Setup OpenTofu
+        id: setup_opentofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.tofu_version }}
+          tofu_wrapper: false
+
+      - name: Setup Terragrunt v${{ env.tg_version }}
+        run: |
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.tg_version }}/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+          terragrunt -v
+
+      - name: Copy configurations
+        run: |
+          cp -pf source/.github/vars/apigw/apis-${{ inputs.environment }}.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/inputs.yaml
+          cp -pf source/.github/vars/apigw/apis-global.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/inputs-apis.yaml
+          cp -pf source/.github/vars/inputs-global.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/inputs-global.yaml
+
+      - name: Copy API Files Bundle
+        run: |
+          mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/apifiles/
+          cp -pfR source/apifiles/* cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw/apifiles/
+
+      - name: Generate release.yaml
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
+        run: |
+          cat > release.yaml << EOF 
+          release:
+            name: ${{ steps.release_name.outputs.value }}
+            source:
+              name: ${{ steps.getowner.outputs.repo_name }}
+              version: ${{ inputs.release_version }}
+              githubPackages:
+                name: '${{ inputs.package_name }}'
+                type: ${{ inputs.package_type }}
+          EOF
+
+      - name: Generate Global Inputs global-inputs.yaml
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}
+        run: |
+          cat > global-inputs.yaml << EOF
+          environment: ${{ inputs.deployment_name }}
+          release_name: ${{ steps.release_name.outputs.value }}
+          default:
+            region: ${{ vars.DEPLOYMENT_AWS_REGION }}
+            sts_role_arn: ${{ vars.DEPLOYMENT_STS_ROLE_ARN }}
+          EOF
+
+      - name: Generate state_conf.yaml from vars.DEPLOYMENT_STATE_CONF
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}
+        run: |
+          cat > state_conf.yaml << EOF
+          ${{ vars.DEPLOYMENT_STATE_CONF }}
+          EOF
+
+      - name: Determine Plan Action
+        uses: actions/github-script@v7
+        id: plan_action
+        with:
+          script: |
+            const is_destroy = ${{ inputs.destroy }};
+            if (is_destroy) {
+              core.setOutput('value', 'plan -destroy')
+              console.log('destroy');
+            } else {
+              core.setOutput('value', 'plan')
+              console.log('apply');
+            }
+
+      - name: Terragrunt Plan
+        id: plan
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
+        run: terragrunt --terragrunt-non-interactive ${{ steps.plan_action.outputs.value }} -no-color -input=false
+        continue-on-error: false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GITHUB_API_TOKEN: ${{ secrets.token }}
+
+      - name: Terragrunt Plan to JSON
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
+        run: terragrunt --terragrunt-non-interactive show -json plan.tfplan > tfplan.json
+        continue-on-error: true
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GITHUB_API_TOKEN: ${{ secrets.token }}
+
+      - name: TF Summarize of JSON file
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
+        run: tf-summarize tfplan.json
+
+      - name: Save Plan File
+        uses: actions/upload-artifact@v4
+        with:
+          name: plan-file-aws-apigw
+          retention-days: 1
+          path: |
+            cd-${{ inputs.environment }}/**/apifiles/**/*
+            cd-${{ inputs.environment }}/**/*.yaml
+            cd-${{ inputs.environment }}/**/plan.tfplan
+            !cd-${{ inputs.environment }}/**/.terragrunt-cache/**/*
+
+  deployment-apply:
+    needs:
+      - deployment-plan
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.deployment_name }}
+    steps:
+      - name: Checkout Base App Template
+        uses: actions/checkout@v4
+        with:
+          repository: cloudopsworks/base-app-template
+          path: cd-${{ inputs.environment }}
+          fetch-depth: 1
+          ref: v${{ env.base_app_version }}
+          token: ${{ secrets.token }}
+
+      - name: Restore Plan File
+        uses: actions/download-artifact@v4
+        with:
+          name: plan-file-aws-apigw
+          path: cd-${{ inputs.environment }}
+
+      - name: Setup OpenTofu
+        id: setup_opentofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.tofu_version }}
+          tofu_wrapper: false
+
+      - name: Setup Terragrunt v${{ env.tg_version }}
+        run: |
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.tg_version }}/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+          terragrunt -v
+
+      - name: Terragrunt Apply
+        id: apply
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
+        run: terragrunt --terragrunt-non-interactive apply -no-color plan.tfplan
+        continue-on-error: false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GITHUB_API_TOKEN: ${{ secrets.token }}

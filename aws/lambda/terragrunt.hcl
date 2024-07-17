@@ -16,7 +16,7 @@ include {
 }
 
 terraform {
-  source = "github.com/cloudopsworks/terraform-module-aws-elasticbeanstalk-deploy.git//?ref=master"
+  source = "github.com/cloudopsworks/terraform-module-aws-lambda-deploy.git//?ref=master"
 }
 
 inputs = {
@@ -26,16 +26,9 @@ inputs = {
     environment_name  = local.base_vars.environment_name
     environment_type  = local.base_vars.namespace
   }
-  repository_owner = local.base_vars.repository_owner
   namespace        = local.base_vars.namespace
-  versions_bucket  = local.local_vars.versions_bucket
-  logs_bucket      = try(local.local_vars.logs_bucket, "")
-  region           = local.global_vars.default.region
-  sts_assume_role  = local.global_vars.default.sts_role_arn
-  beanstalk        = local.local_vars.beanstalk
-  dns              = local.local_vars.dns
-  api_gateway      = local.local_vars.api_gateway
-  alarms           = local.local_vars.alarms
+  repository_owner = local.base_vars.repository_owner
+  lambda           = local.local_vars.lambda
   release          = local.release_vars.release
   absolute_path    = get_terragrunt_dir()
   extra_tags       = try(local.local_vars.tags, {})

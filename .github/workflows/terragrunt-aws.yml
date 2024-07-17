@@ -7,6 +7,10 @@ name: Deploy to AWS Elastic Beanstalk
 on:
   workflow_call:
     inputs:
+      destroy:
+        required: false
+        type: boolean
+        default: false
       release_version:
         required: true
         type: string
@@ -63,27 +67,54 @@ on:
 env:
   tofu_version: 1.7.1
   tg_version: 0.59.5
+  base_app_version: 3
+  tf_summarize_version: 0.3.10
 jobs:
-  data:
-    uses: ./.github/workflows/cd-data.yml
-    secrets:
-      token: ${{ secrets.token }}
-
   deployment-plan:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.deployment_name }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source code
+        uses: actions/checkout@v4
         with:
           path: source
           fetch-depth: 1
           token: ${{ secrets.token }}
 
-      - uses: actions/checkout@v4
+      - name: Checkout Base App Template
+        uses: actions/checkout@v4
         with:
           repository: cloudopsworks/base-app-template
           path: cd-${{ inputs.environment }}
           fetch-depth: 1
+          ref: v${{ env.base_app_version }}
           token: ${{ secrets.token }}
+
+      # Get the owner repo
+      - name: Get owner
+        id: getowner
+        run: |
+          repo_owner=`echo "$GITHUB_REPOSITORY" | cut -f 1 -d "/"`
+          repo_name=`echo "$GITHUB_REPOSITORY" | cut -f 2 -d "/"`
+          echo "owner=$repo_owner" >> $GITHUB_OUTPUT
+          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
+
+      - name: Set Final Release Name
+        id: release_name
+        run: |
+          REL=
+          if [ -z "${{ inputs.release_name }}" ]; then
+            REL="${{ steps.getowner.outputs.repo_name }}"
+          else
+            REL="${{ inputs.release_name }}"
+          fi
+          echo "value=$REL" >> $GITHUB_OUTPUT
+
+      - name: Terraform Plan prettifier
+        uses: kishaningithub/setup-tf-summarize@v2
+        with:
+          github-token: ${{ secrets.BOT_TOKEN }}
+          tf-summarize-version: v${{ env.tf_summarize_version }}
 
       - name: Setup OpenTofu
         id: setup_opentofu
@@ -100,15 +131,27 @@ jobs:
 
       - name: Copy configurations
         run: |
-          cp -p source/.github/vars/inputs-${{ inputs.environment }}.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/input.yaml
+          cp -pf source/.github/vars/inputs-${{ inputs.environment }}.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/inputs.yaml
+          cp -pf source/.github/vars/inputs-global.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/
+
+      - name: Copy Values Bundle
+        run: |
+          mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+          cp -pfR source/.github/values/${{ inputs.environment }}/${{ steps.release_name.outputs.value }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+
+      - name: Create Hash value for values bundle
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          find values/${{ steps.release_name.outputs.value }} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ steps.release_name.outputs.value }}
 
       - name: Generate release.yaml
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
-          cat > cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release.yaml << EOF 
+          cat > release.yaml << EOF 
           release:
-            name: ${{ inputs.release_name }}
+            name: ${{ steps.release_name.outputs.value }}
             source:
-              name: ${{ inputs.deployment_name }}
+              name: ${{ steps.getowner.outputs.repo_name }}
               version: ${{ inputs.release_version }}
               githubPackages:
                 name: '${{ inputs.package_name }}'
@@ -116,25 +159,41 @@ jobs:
           EOF
 
       - name: Generate Global Inputs global-inputs.yaml
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}
         run: |
-          cat > cd-${{ inputs.environment }}/global-inputs.yaml << EOF
-          environment: ${{ inputs.environment }}
-          release_name: ${{ inputs.release_name }}
+          cat > global-inputs.yaml << EOF
+          environment: ${{ inputs.deployment_name }}
+          release_name: ${{ steps.release_name.outputs.value }}
           default:
             region: ${{ vars.DEPLOYMENT_AWS_REGION }}
             sts_role_arn: ${{ vars.DEPLOYMENT_STS_ROLE_ARN }}
           EOF
 
       - name: Generate state_conf.yaml from vars.DEPLOYMENT_STATE_CONF
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}
         run: |
-          cat > cd-${{ inputs.environment }}/state_conf.yaml << EOF
+          cat > state_conf.yaml << EOF
           ${{ vars.DEPLOYMENT_STATE_CONF }}
           EOF
+
+      - name: Determine Plan Action
+        uses: actions/github-script@v7
+        id: plan_action
+        with:
+          script: |
+            const is_destroy = ${{ inputs.destroy }};
+            if (is_destroy) {
+              core.setOutput('value', 'plan -destroy')
+              console.log('destroy');
+            } else {
+              core.setOutput('value', 'plan')
+              console.log('apply');
+            }
 
       - name: Terragrunt Plan
         id: plan
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
-        run: terragrunt plan -no-color -input=false -out plan.tfplan
+        run: terragrunt --terragrunt-non-interactive ${{ steps.plan_action.outputs.value }} -no-color -input=false
         continue-on-error: false
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -144,32 +203,51 @@ jobs:
           HELM_EXPERIMENTAL_OCI: "1"
           GITHUB_API_TOKEN: ${{ secrets.token }}
 
+      - name: Terragrunt Plan to JSON
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: terragrunt --terragrunt-non-interactive show -json plan.tfplan > tfplan.json
+        continue-on-error: true
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GITHUB_API_TOKEN: ${{ secrets.token }}
+
+      - name: TF Summarize of JSON file
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: tf-summarize tfplan.json
+
       - name: Save Plan File
         uses: actions/upload-artifact@v4
         with:
-          token: ${{ secrets.token }}
-          name: plan-file
+          name: plan-file-aws-${{ inputs.target_cloud_type }}
+          retention-days: 1
           path: |
-            **/*/*.yaml
-            **/*/plan.tfplan
+            cd-${{ inputs.environment }}/**/values/**/*
+            cd-${{ inputs.environment }}/**/.values_hash_*
+            cd-${{ inputs.environment }}/**/*.yaml
+            cd-${{ inputs.environment }}/**/plan.tfplan
+            !cd-${{ inputs.environment }}/**/.terragrunt-cache/**/*
 
   deployment-apply:
+    needs:
+      - deployment-plan
     runs-on: ubuntu-latest
     environment: ${{ inputs.deployment_name }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Base App Template
+        uses: actions/checkout@v4
         with:
           repository: cloudopsworks/base-app-template
           path: cd-${{ inputs.environment }}
           fetch-depth: 1
+          ref: v${{ env.base_app_version }}
           token: ${{ secrets.token }}
 
       - name: Restore Plan File
         uses: actions/download-artifact@v4
         with:
-          token:  ${{ secrets.token }}
-          name: plan-file
-          path: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}
+          name: plan-file-aws-${{ inputs.target_cloud_type }}
+          path: cd-${{ inputs.environment }}
 
       - name: Setup OpenTofu
         id: setup_opentofu
@@ -187,8 +265,7 @@ jobs:
       - name: Terragrunt Apply
         id: apply
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
-        run: |
-          terragrunt apply -no-color plan.tfplan
+        run: terragrunt --terragrunt-non-interactive apply -no-color plan.tfplan
         continue-on-error: false
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

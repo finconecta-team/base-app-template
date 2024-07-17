@@ -51,7 +51,7 @@ jobs:
           cmd: yq e -o=json -I=0 '[.config.reviewers[] | select(. != "${{ github.event.pull_request.user.login }}") ]' .github/cloudopsworks-ci.yaml
 
       - name: Assign Milestone to the PR
-        uses: actions/github-script@7
+        uses: actions/github-script@v7
         if: ${{ startsWith(github.head_ref,'release/') }}
         with:
           github-token: ${{secrets.token}}
@@ -86,7 +86,7 @@ jobs:
               milestone: mil_number
             });
 
-      - uses: actions/github-script@7
+      - uses: actions/github-script@v7
         if: ${{ steps.check_automatic.outputs.result == 'true' || startsWith(github.head_ref,'release/') }}
         with:
           github-token: ${{secrets.token}}
@@ -99,7 +99,7 @@ jobs:
               labels: ['approved', 'automatic-environment']
             });
 
-      - uses: actions/github-script@7
+      - uses: actions/github-script@v7
         if: ${{ steps.check_automatic.outputs.result != 'true' && ! startsWith(github.head_ref,'release/') }}
         with:
           github-token: ${{secrets.token}}
