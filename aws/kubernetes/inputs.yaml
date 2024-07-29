@@ -1,0 +1,12 @@
+# Input Variables
+cluster_name: "my-cluster"
+helm_repo_url: ""
+helm_chart_name: ""
+values:
+  - key: "key1"
+    value: "value1"
+  - key: "key2"
+    value: "value2"
+  - key: "key3"
+    value: "value3"
+tags: {}

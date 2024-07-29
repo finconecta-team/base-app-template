@@ -135,14 +135,21 @@ jobs:
           cp -pf source/.github/vars/inputs-global.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/
 
       - name: Copy Values Bundle
+        if: ${{ inputs.target_cloud_type == 'beanstalk' || inputs.target_cloud_type == 'lambda' }}
         run: |
           mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
           cp -pfR source/.github/values/${{ inputs.environment }}/${{ steps.release_name.outputs.value }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
 
       - name: Create Hash value for values bundle
+        if: ${{ inputs.target_cloud_type == 'beanstalk' || inputs.target_cloud_type == 'lambda' }}
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
           find values/${{ steps.release_name.outputs.value }} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ steps.release_name.outputs.value }}
+
+      - name: Copy Values Bundle
+        if: ${{ inputs.target_cloud_type == 'kubernetes' }}
+        run: |
+          cp -pf source/.github/vars/helm/values-${{ inputs.environment }}.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/helm-values.yaml
 
       - name: Generate release.yaml
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
