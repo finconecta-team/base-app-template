@@ -2,6 +2,7 @@
 cluster_name: "my-cluster"
 helm_repo_url: ""
 helm_chart_name: ""
+helm_chart_path: ""
 values:
   - key: "key1"
     value: "value1"
