@@ -232,14 +232,14 @@ jobs:
             }
             
             // Check some conditions in order to report back proper variables:
-            // HELM_REGISTRY
-            // DOCKER_REGISTRY
+            // HELM_REGISTRY_ADDRESS
+            // DOCKER_REGISTRY_ADDRESS
             // BUILD_AWS_REGION
             // BUILD_AWS_STS_ROLE_ARN
             // 
             const targetCloud = '${{ steps.cloud.outputs.result }}';
             // get helm registry variable from org
-            const helm_registry_var = `HELM_REGISTRY_${environment.toUpperCase()}`;
+            const helm_registry_var = `HELM_REGISTRY_ADDRESS_${environment.toUpperCase()}`;
             const {data : helm} = await github.rest.actions.getOrgVariable({
               org: context.repo.owner,
               name: helm_registry_var
@@ -255,7 +255,7 @@ jobs:
             
             
             // get registry variable from org
-            const registry_var = `DOCKER_REGISTRY_${environment.toUpperCase()}`;
+            const registry_var = `DOCKER_REGISTRY_ADDRESS_${environment.toUpperCase()}`;
             const {data : registry} = await github.rest.actions.getOrgVariable({
               org: context.repo.owner,
               name: registry_var
