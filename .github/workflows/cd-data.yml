@@ -230,6 +230,12 @@ jobs:
             const {data : registry} = await github.rest.actions.getOrgVariable({
               org: context.repo.owner,
               name: registry_var
+            }).then((response) => {
+              return response.data;
+            }).catch((error) => {
+              core.error(`Error getting ${registry_var} from org variables`);
+              core.error(error);
+              return {};
             });
             
             core.info(`${registry_var} == ${registry}`);
