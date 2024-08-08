@@ -38,5 +38,4 @@ spec:
 {{- else }}
       secretName: "tls-{{ template "fullname" . }}-s"
 {{- end }}
-
 {{- end }}
