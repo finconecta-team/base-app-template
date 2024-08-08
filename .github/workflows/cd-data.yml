@@ -37,6 +37,8 @@ on:
         value: ${{ jobs.data.outputs.deliveryPush }}
       dockerRegistry:
         value: ${{ jobs.data.outputs.dockerRegistry }}
+      helmRegistry:
+        value: ${{ jobs.data.outputs.helmRegistry }}
       awsRegion:
         value: ${{ jobs.data.outputs.awsRegion }}
       awsStsRoleArn:
@@ -58,6 +60,7 @@ jobs:
       isAutomatic: ${{ steps.is_automatic.outputs.result }}
       deliveryPush: ${{ steps.workspace.outputs.deliveryPush }}
       dockerRegistry: ${{ steps.workspace.outputs.dockerRegistry }}
+      helmRegistry: ${{ steps.workspace.outputs.helmRegistry }}
       awsRegion: ${{ steps.workspace.outputs.awsRegion }}
       awsStsRoleArn: ${{ steps.workspace.outputs.awsStsRoleArn }}
 
@@ -229,11 +232,28 @@ jobs:
             }
             
             // Check some conditions in order to report back proper variables:
+            // HELM_REGISTRY
             // DOCKER_REGISTRY
             // BUILD_AWS_REGION
             // BUILD_AWS_STS_ROLE_ARN
             // 
             const targetCloud = '${{ steps.cloud.outputs.result }}';
+            // get helm registry variable from org
+            const helm_registry_var = `HELM_REGISTRY_${environment.toUpperCase()}`;
+            const {data : helm} = await github.rest.actions.getOrgVariable({
+              org: context.repo.owner,
+              name: helm_registry_var
+            }).then((response) => {
+              return response.data;
+            }).catch((error) => {
+              core.error(`Error getting ${helm_registry_var} from org variables`);
+              core.error(error);
+              return {};
+            });
+            core.info(`${helm_registry_var} == ${helm}`);
+            const helm_registry = helm ? helm.value : '';   
+            
+            
             // get registry variable from org
             const registry_var = `DOCKER_REGISTRY_${environment.toUpperCase()}`;
             const {data : registry} = await github.rest.actions.getOrgVariable({
@@ -246,7 +266,6 @@ jobs:
               core.error(error);
               return {};
             });
-            
             core.info(`${registry_var} == ${registry}`);
             const docker_registry = registry ? registry.value : '';   
             
@@ -262,7 +281,6 @@ jobs:
               core.error(error);
               return {};
             });
-            
             core.info(`${region_var} == ${region}`);
             const aws_region = region ? region.value : '';   
 
@@ -278,7 +296,6 @@ jobs:
               core.error(error);
               return {};
             });
-            
             core.info(`${sts_role_var} == ${sts_role}`);
             const aws_sts_role = sts_role ? sts_role.value : '';   
 
@@ -292,6 +309,7 @@ jobs:
               deploymentName: deploymentName,
               deliveryPush: deliveryPush,
               dockerRegistry: docker_registry,
+              helmRegistry: helm_registry,
               awsRegion: aws_region,
               awsStsRoleArn: aws_sts_role
             }; 
@@ -304,6 +322,7 @@ jobs:
             core.setOutput('deploymentName', deploymentName);
             core.setOutput('deliveryPush', deliveryPush);
             core.setOutput('dockerRegistry', docker_registry);
+            core.setOutput('helmRegistry', helm_registry);
             core.setOutput('awsRegion', aws_region);
             core.setOutput('awsStsRoleArn', aws_sts_role);
 
