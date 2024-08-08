@@ -218,6 +218,21 @@ jobs:
               }
             }
             
+            # Check some conditions in order to report back proper variables:
+            # DOCKER_REGISTRY
+            # BUILD_AWS_REGION
+            # BUILD_AWS_STS_ROLE_ARN
+            # 
+            const targetCloud = '${{ steps.cloud.outputs.result }}';
+            # get registry variable from org
+            const registry_var = `DOCKER_REGISTRY_${environment}`;
+            const {data : registry} = await github.rest.actions.getOrgVariable({
+              org: contex.repo.owner,
+              name: registry_var
+            });
+            
+            core.info(`${registry_var} == ${registry}`);
+              
             const outputV = { 
               environment: environment, 
               isPreRelease: isPreRelease, 
