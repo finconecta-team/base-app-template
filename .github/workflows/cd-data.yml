@@ -244,7 +244,7 @@ jobs:
               org: context.repo.owner,
               name: helm_registry_var
             }).then((response) => {
-              return response.data;
+              return response;
             }).catch((error) => {
               core.error(`Error getting ${helm_registry_var} from org variables`);
               core.error(error);
@@ -260,7 +260,7 @@ jobs:
               org: context.repo.owner,
               name: registry_var
             }).then((response) => {
-              return response.data;
+              return response;
             }).catch((error) => {
               core.error(`Error getting ${registry_var} from org variables`);
               core.error(error);
@@ -275,7 +275,7 @@ jobs:
               org: context.repo.owner,
               name: region_var
             }).then((response) => {
-              return response.data;
+              return response;
             }).catch((error) => {
               core.error(`Error getting ${region_var} from org variables`);
               core.error(error);
@@ -290,7 +290,7 @@ jobs:
               org: context.repo.owner,
               name: sts_role_var
             }).then((response) => {
-              return response.data;
+              return response;
             }).catch((error) => {
               core.error(`Error getting ${sts_role_var} from org variables`);
               core.error(error);
