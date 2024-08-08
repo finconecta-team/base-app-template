@@ -35,6 +35,12 @@ on:
         value: ${{ jobs.data.outputs.isAutomatic }}
       deliveryPush:
         value: ${{ jobs.data.outputs.deliveryPush }}
+      dockerRegistry:
+        value: ${{ jobs.data.outputs.dockerRegistry }}
+      awsRegion:
+        value: ${{ jobs.data.outputs.awsRegion }}
+      awsStsRoleArn:
+        value: ${{ jobs.data.outputs.awsStsRoleArn }}
 
 jobs:
   data:
@@ -51,6 +57,10 @@ jobs:
       apisEnabled: ${{ steps.apis_enabled.outputs.result }}
       isAutomatic: ${{ steps.is_automatic.outputs.result }}
       deliveryPush: ${{ steps.workspace.outputs.deliveryPush }}
+      dockerRegistry: ${{ steps.workspace.outputs.dockerRegistry }}
+      awsRegion: ${{ steps.workspace.outputs.awsRegion }}
+      awsStsRoleArn: ${{ steps.workspace.outputs.awsStsRoleArn }}
+
     runs-on: ubuntu-latest
     steps:
       # Checkout the repository
@@ -107,7 +117,6 @@ jobs:
         id: workspace
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.token }}
           script: |
             const deployments = JSON.parse('${{ steps.deploy_conf.outputs.result }}');
             const branch = '${{ github.ref_name }}';
@@ -226,7 +235,7 @@ jobs:
             // 
             const targetCloud = '${{ steps.cloud.outputs.result }}';
             // get registry variable from org
-            const registry_var = `DOCKER_REGISTRY_${environment}`;
+            const registry_var = `DOCKER_REGISTRY_${environment.toUpperCase()}`;
             const {data : registry} = await github.rest.actions.getOrgVariable({
               org: context.repo.owner,
               name: registry_var
@@ -239,7 +248,40 @@ jobs:
             });
             
             core.info(`${registry_var} == ${registry}`);
-              
+            const docker_registry = registry ? registry.value : '';   
+            
+            // get BUILD_AWS_REGION variable from org
+            const region_var = `BUILD_AWS_REGION_${environment.toUpperCase()}`;
+            const {data : region} = await github.rest.actions.getOrgVariable({
+              org: context.repo.owner,
+              name: region_var
+            }).then((response) => {
+              return response.data;
+            }).catch((error) => {
+              core.error(`Error getting ${region_var} from org variables`);
+              core.error(error);
+              return {};
+            });
+            
+            core.info(`${region_var} == ${region}`);
+            const aws_region = region ? region.value : '';   
+
+            // get BUILD_AWS_STS_ROLE_ARN variable from org
+            const sts_role_var = `BUILD_AWS_STS_ROLE_ARN_${environment.toUpperCase()}`;
+            const {data : sts_role} = await github.rest.actions.getOrgVariable({
+              org: context.repo.owner,
+              name: sts_role_var
+            }).then((response) => {
+              return response.data;
+            }).catch((error) => {
+              core.error(`Error getting ${sts_role_var} from org variables`);
+              core.error(error);
+              return {};
+            });
+            
+            core.info(`${sts_role_var} == ${sts_role}`);
+            const aws_sts_role = sts_role ? sts_role.value : '';   
+
             const outputV = { 
               environment: environment, 
               isPreRelease: isPreRelease, 
@@ -248,7 +290,10 @@ jobs:
               isEnabled: isEnabled,
               hasQualifier: hasQualifier,
               deploymentName: deploymentName,
-              deliveryPush: deliveryPush
+              deliveryPush: deliveryPush,
+              dockerRegistry: docker_registry,
+              awsRegion: aws_region,
+              awsStsRoleArn: aws_sts_role
             }; 
             core.setOutput('workspace', environment);
             core.setOutput('isRelease', isRelease);
@@ -258,5 +303,9 @@ jobs:
             core.setOutput('hasQualifier', hasQualifier);
             core.setOutput('deploymentName', deploymentName);
             core.setOutput('deliveryPush', deliveryPush);
+            core.setOutput('dockerRegistry', docker_registry);
+            core.setOutput('awsRegion', aws_region);
+            core.setOutput('awsStsRoleArn', aws_sts_role);
 
             return outputV;
+          github-token: ${{ secrets.token }}
