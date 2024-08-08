@@ -250,7 +250,7 @@ jobs:
               core.error(error);
               return {};
             });
-            core.info(`${helm_registry_var} == ${helm}`);
+            core.info(`${helm_registry_var} == ${JSON.stringify(helm)}`);
             const helm_registry = helm ? helm.value : '';   
             
             
@@ -266,7 +266,7 @@ jobs:
               core.error(error);
               return {};
             });
-            core.info(`${registry_var} == ${registry}`);
+            core.info(`${registry_var} == ${JSON.stringify(registry)}`);
             const docker_registry = registry ? registry.value : '';   
             
             // get BUILD_AWS_REGION variable from org
@@ -281,7 +281,7 @@ jobs:
               core.error(error);
               return {};
             });
-            core.info(`${region_var} == ${region}`);
+            core.info(`${region_var} == ${JSON.stringify(region)}`);
             const aws_region = region ? region.value : '';   
 
             // get BUILD_AWS_STS_ROLE_ARN variable from org
@@ -296,7 +296,7 @@ jobs:
               core.error(error);
               return {};
             });
-            core.info(`${sts_role_var} == ${sts_role}`);
+            core.info(`${sts_role_var} == ${JSON.stringify(sts_role)}`);
             const aws_sts_role = sts_role ? sts_role.value : '';   
 
             const outputV = { 
