@@ -345,4 +345,4 @@ jobs:
         id: runner_set_env
         uses: mikefarah/yq@master
         with:
-          cmd: yq -o=json -I=0 '.runner_set' .github/vars/inputs-${{ step.workspace.outputs.environment }}.yaml
+          cmd: yq -o=json -I=0 '.runner_set' .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml
