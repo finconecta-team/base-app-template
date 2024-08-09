@@ -65,7 +65,7 @@ jobs:
       helmRegistry: ${{ steps.workspace.outputs.helmRegistry }}
       awsRegion: ${{ steps.workspace.outputs.awsRegion }}
       awsStsRoleArn: ${{ steps.workspace.outputs.awsStsRoleArn }}
-      runnerSet: ${{ steps.runner_set_env.outputs.result != '' && steps.runner_set_env.outputs.result != null || steps.runner_set.outputs.result }}
+      runnerSet: ${{ steps.runner_set_env.outputs.result != '' && steps.runner_set_env.outputs.result || steps.runner_set.outputs.result }}
 
     runs-on: ubuntu-latest
     steps:
