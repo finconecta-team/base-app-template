@@ -43,6 +43,8 @@ on:
         value: ${{ jobs.data.outputs.awsRegion }}
       awsStsRoleArn:
         value: ${{ jobs.data.outputs.awsStsRoleArn }}
+      runnerSet:
+        value: ${{ jobs.data.outputs.runnerSet }}
 
 jobs:
   data:
@@ -63,6 +65,7 @@ jobs:
       helmRegistry: ${{ steps.workspace.outputs.helmRegistry }}
       awsRegion: ${{ steps.workspace.outputs.awsRegion }}
       awsStsRoleArn: ${{ steps.workspace.outputs.awsStsRoleArn }}
+      runnerSet: ${{ steps.runner_set_env.outputs.result != '' && steps.runner_set_env.outputs.result != null || steps.runner_set.outputs.result }}
 
     runs-on: ubuntu-latest
     steps:
@@ -331,3 +334,15 @@ jobs:
 
             return outputV;
           github-token: ${{ secrets.token }}
+
+      - name: Get the Runner Set for this build
+        id: runner_set
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -o=json -I=0 '.cd.runner_set' .github/cloudopsworks-ci.yaml
+
+      - name: Get the Runner Set for the environment
+        id: runner_set_env
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -o=json -I=0 '.runner_set' .github/vars/inputs-${{ step.workspace.outputs.environment }}.yaml

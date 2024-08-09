@@ -37,6 +37,9 @@ on:
       target_cloud_type:
         required: true
         type: string
+      runner_set:
+        required: true
+        type: string
       DOCKER_REGISTRY_ADDRESS:
         required: false
         type: string
@@ -71,7 +74,7 @@ env:
   tf_summarize_version: 0.3.10
 jobs:
   deployment-plan:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner_set }}
     environment: ${{ inputs.deployment_name }}
     steps:
       - name: Checkout source code
@@ -238,7 +241,7 @@ jobs:
   deployment-apply:
     needs:
       - deployment-plan
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner_set }}
     environment: ${{ inputs.deployment_name }}
     steps:
       - name: Checkout Base App Template

@@ -34,6 +34,9 @@ on:
       apis_enabled:
         required: true
         type: boolean
+      runner_set:
+        required: true
+        type: string
       BOT_USER:
         required: true
         type: string
@@ -86,6 +89,7 @@ jobs:
       package_type: ${{ inputs.package_type }}
       deployment_name: ${{ inputs.deployment_name }}
       target_cloud: 'aws'
+      runner_set: ${{ inputs.runner_set }}
       BOT_USER: ${{ inputs.BOT_USER }}
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}

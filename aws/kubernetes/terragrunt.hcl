@@ -16,6 +16,34 @@ include {
   path = find_in_parent_folders()
 }
 
+generate "kubernetes_provider" {
+  path      = "provider.l.tf"
+  if_exists = "overwrite_terragrunt"
+  contents  = <<EOF
+data "aws_eks_cluster" "cluster" {
+  name = "${local.local_vars.cluster_name}"
+}
+
+data "aws_eks_cluster_auth" "cluster" {
+  name = "${local.local_vars.cluster_name}"
+}
+
+provider "kubernetes" {
+  host                   = data.aws_eks_cluster.cluster.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
+  token                  = data.aws_eks_cluster_auth.cluster.token
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = data.aws_eks_cluster.cluster.endpoint
+    cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
+    token                  = data.aws_eks_cluster_auth.cluster.token
+  }
+}
+EOF
+}
+
 terraform {
   source = "github.com/cloudopsworks/terraform-module-aws-eks-helm-deploy.git//?ref=master"
 }
