@@ -53,7 +53,7 @@ on:
 
 jobs:
   preview:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner_set }}
     steps:
       # Proceed with checkout of source with all the references (depth=0)  
       - uses: actions/checkout@v4
