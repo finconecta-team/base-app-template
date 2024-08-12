@@ -63,7 +63,7 @@ resources:
     memory: 512Mi
 probePath: /actuator/health
 livenessProbe:
-  initialDelaySeconds: 10
+  initialDelaySeconds: 5
   periodSeconds: 10
   successThreshold: 1
   timeoutSeconds: 1
@@ -72,7 +72,10 @@ readinessProbe:
   periodSeconds: 10
   successThreshold: 1
   timeoutSeconds: 1
-
+startupProbe:
+  enabled: false
+  failureThreshold: 30
+  periodSeconds: 10
 # Tracing config
 tracing:
   enabled: false

@@ -69,9 +69,21 @@ spec:
 {{- else }}
             port: {{ .Values.service.internalPort }}
 {{- end }}
-          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          periodSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
           successThreshold: {{ .Values.readinessProbe.successThreshold }}
           timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+${{- if .Values.startupProbe.enabled }}
+        startupProbe:
+          httpGet:
+            path: {{ .Values.probePath }}
+{{- if .Values.readinessProbe.port }}
+            port: {{ .Values.readinessProbe.port }}
+{{- else }}
+            port: {{ .Values.service.internalPort }}
+{{- end }}
+          failureThreshold: {{ .Values.startupProbe.failureThreshold }}
+          periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+  {{- end }}
         resources:
 {{ toYaml .Values.resources | indent 12 }}
         volumeMounts: 
