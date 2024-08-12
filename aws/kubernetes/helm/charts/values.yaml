@@ -98,3 +98,5 @@ ingress:
   pathType: Prefix
   ingressClass: nginx
   annotations: {}
+  tls:
+    enabled: false
