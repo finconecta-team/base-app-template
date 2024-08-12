@@ -74,6 +74,7 @@ readinessProbe:
   timeoutSeconds: 1
 startupProbe:
   enabled: false
+  initialDelaySeconds: 30
   failureThreshold: 30
   periodSeconds: 10
 # Tracing config
