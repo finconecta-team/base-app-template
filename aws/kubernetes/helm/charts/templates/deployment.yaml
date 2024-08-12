@@ -52,7 +52,11 @@ spec:
         livenessProbe:
           httpGet:
             path: {{ .Values.probePath }}
+{{- if .Values.livenessProbe.port }}
+            port: {{ .Values.livenessProbe.port }}
+{{- else }}
             port: {{ .Values.service.internalPort }}
+{{- end }}
           initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
           successThreshold: {{ .Values.livenessProbe.successThreshold }}
@@ -60,7 +64,11 @@ spec:
         readinessProbe:
           httpGet:
             path: {{ .Values.probePath }}
+{{- if .Values.readinessProbe.port }}
+            port: {{ .Values.readinessProbe.port }}
+{{- else }}
             port: {{ .Values.service.internalPort }}
+{{- end }}
           periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
           successThreshold: {{ .Values.readinessProbe.successThreshold }}
           timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
