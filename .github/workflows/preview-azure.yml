@@ -18,6 +18,9 @@ on:
       pr_name:
         required: true
         type: string
+      runner_set:
+        required: true
+        type: string
       DOCKER_REGISTRY_ADDRESS:
         required: true
         type: string
@@ -49,7 +52,7 @@ on:
 
 jobs:
   preview:
-    runs-on: [ self-hosted, azure ]
+    runs-on: ${{ inputs.runner_set }}
     steps:
       # Proceed with checkout of source with all the references (depth=0)  
       - uses: actions/checkout@v4

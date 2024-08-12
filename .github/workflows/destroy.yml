@@ -37,6 +37,9 @@ on:
       apis_enabled:
         required: true
         type: boolean
+      runner_set:
+        required: true
+        type: string
       DOCKER_REGISTRY_ADDRESS:
         required: false
         type: string

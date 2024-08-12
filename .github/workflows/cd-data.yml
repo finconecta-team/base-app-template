@@ -35,6 +35,16 @@ on:
         value: ${{ jobs.data.outputs.isAutomatic }}
       deliveryPush:
         value: ${{ jobs.data.outputs.deliveryPush }}
+      dockerRegistry:
+        value: ${{ jobs.data.outputs.dockerRegistry }}
+      helmRegistry:
+        value: ${{ jobs.data.outputs.helmRegistry }}
+      awsRegion:
+        value: ${{ jobs.data.outputs.awsRegion }}
+      awsStsRoleArn:
+        value: ${{ jobs.data.outputs.awsStsRoleArn }}
+      runnerSet:
+        value: ${{ jobs.data.outputs.runnerSet }}
 
 jobs:
   data:
@@ -51,6 +61,12 @@ jobs:
       apisEnabled: ${{ steps.apis_enabled.outputs.result }}
       isAutomatic: ${{ steps.is_automatic.outputs.result }}
       deliveryPush: ${{ steps.workspace.outputs.deliveryPush }}
+      dockerRegistry: ${{ steps.workspace.outputs.dockerRegistry }}
+      helmRegistry: ${{ steps.workspace.outputs.helmRegistry }}
+      awsRegion: ${{ steps.workspace.outputs.awsRegion }}
+      awsStsRoleArn: ${{ steps.workspace.outputs.awsStsRoleArn }}
+      runnerSet: ${{ steps.runner_set_env.outputs.result != '' && steps.runner_set_env.outputs.result || steps.runner_set.outputs.result }}
+
     runs-on: ubuntu-latest
     steps:
       # Checkout the repository
@@ -218,6 +234,77 @@ jobs:
               }
             }
             
+            // Check some conditions in order to report back proper variables:
+            // HELM_REGISTRY_ADDRESS
+            // DOCKER_REGISTRY_ADDRESS
+            // BUILD_AWS_REGION
+            // BUILD_AWS_STS_ROLE_ARN
+            // 
+            const targetCloud = '${{ steps.cloud.outputs.result }}';
+            // get helm registry variable from org
+            const helm_registry_var = `HELM_REGISTRY_ADDRESS_${environment.toUpperCase()}`;
+            const {data : helm} = await github.rest.actions.getOrgVariable({
+              org: context.repo.owner,
+              name: helm_registry_var
+            }).then((response) => {
+              return response;
+            }).catch((error) => {
+              core.error(`Error getting ${helm_registry_var} from org variables`);
+              core.error(error);
+              return {};
+            });
+            core.info(`${helm_registry_var} == ${JSON.stringify(helm)}`);
+            const helm_registry = helm ? helm.value : '';
+            core.info(`${helm_registry_var} == ${helm_registry}`);
+            
+            // get registry variable from org
+            const registry_var = `DOCKER_REGISTRY_ADDRESS_${environment.toUpperCase()}`;
+            const {data : registry} = await github.rest.actions.getOrgVariable({
+              org: context.repo.owner,
+              name: registry_var
+            }).then((response) => {
+              return response;
+            }).catch((error) => {
+              core.error(`Error getting ${registry_var} from org variables`);
+              core.error(error);
+              return {};
+            });
+            core.info(`${registry_var} == ${JSON.stringify(registry)}`);
+            const docker_registry = registry ? registry.value : ''; 
+            core.info(`${registry_var} == ${docker_registry}`);
+            
+            // get BUILD_AWS_REGION variable from org
+            const region_var = `BUILD_AWS_REGION_${environment.toUpperCase()}`;
+            const {data : region} = await github.rest.actions.getOrgVariable({
+              org: context.repo.owner,
+              name: region_var
+            }).then((response) => {
+              return response;
+            }).catch((error) => {
+              core.error(`Error getting ${region_var} from org variables`);
+              core.error(error);
+              return {};
+            });
+            core.info(`${region_var} == ${JSON.stringify(region)}`);
+            const aws_region = region ? region.value : '';
+            core.info(`${region_var} == ${aws_region}`);
+
+            // get BUILD_AWS_STS_ROLE_ARN variable from org
+            const sts_role_var = `BUILD_AWS_STS_ROLE_ARN_${environment.toUpperCase()}`;
+            const {data : sts_role} = await github.rest.actions.getOrgVariable({
+              org: context.repo.owner,
+              name: sts_role_var
+            }).then((response) => {
+              return response;
+            }).catch((error) => {
+              core.error(`Error getting ${sts_role_var} from org variables`);
+              core.error(error);
+              return {};
+            });
+            core.info(`${sts_role_var} == ${JSON.stringify(sts_role)}`);
+            const aws_sts_role = sts_role ? sts_role.value : '';
+            core.info(`${sts_role_var} == ${aws_sts_role}`);
+
             const outputV = { 
               environment: environment, 
               isPreRelease: isPreRelease, 
@@ -226,7 +313,11 @@ jobs:
               isEnabled: isEnabled,
               hasQualifier: hasQualifier,
               deploymentName: deploymentName,
-              deliveryPush: deliveryPush
+              deliveryPush: deliveryPush,
+              dockerRegistry: docker_registry,
+              helmRegistry: helm_registry,
+              awsRegion: aws_region,
+              awsStsRoleArn: aws_sts_role
             }; 
             core.setOutput('workspace', environment);
             core.setOutput('isRelease', isRelease);
@@ -236,5 +327,22 @@ jobs:
             core.setOutput('hasQualifier', hasQualifier);
             core.setOutput('deploymentName', deploymentName);
             core.setOutput('deliveryPush', deliveryPush);
+            core.setOutput('dockerRegistry', docker_registry);
+            core.setOutput('helmRegistry', helm_registry);
+            core.setOutput('awsRegion', aws_region);
+            core.setOutput('awsStsRoleArn', aws_sts_role);
 
             return outputV;
+          github-token: ${{ secrets.token }}
+
+      - name: Get the Runner Set for this build
+        id: runner_set
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -I=0 '.cd.runner_set' .github/cloudopsworks-ci.yaml
+
+      - name: Get the Runner Set for the environment
+        id: runner_set_env
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -I=0 '.runner_set' .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml

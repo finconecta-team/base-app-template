@@ -1,0 +1,4 @@
+organization_name: "ORG"
+environment_name: "ENV-NAME"
+namespace: "dev|uat|prod"
+repository_owner: "REPO-OWNER"
