@@ -244,6 +244,13 @@ jobs:
     runs-on: ${{ inputs.runner_set }}
     environment: ${{ inputs.deployment_name }}
     steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          path: source
+          fetch-depth: 1
+          token: ${{ secrets.token }}
+
       - name: Checkout Base App Template
         uses: actions/checkout@v4
         with:
