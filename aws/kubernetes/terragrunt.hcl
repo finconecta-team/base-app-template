@@ -65,7 +65,12 @@ inputs = {
   helm_chart_name    = try(local.local_vars.helm_chart_name, "")
   helm_chart_path    = try(local.local_vars.helm_chart_path, "")
   values_file        = local.values_file
-  values_overrides   = local.local_vars.helm_values_overrides
+  values_overrides   = merge(
+    local.local_vars.helm_values_overrides,
+    {
+      "image.tag" = local.release_vars.release.source.version
+    }
+  )
   container_registry = local.local_vars.container_registry
   config_map         = local.local_vars.config_map
   secrets            = local.local_vars.aws
