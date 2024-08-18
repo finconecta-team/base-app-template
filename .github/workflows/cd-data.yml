@@ -339,7 +339,7 @@ jobs:
         id: runner_set
         uses: mikefarah/yq@master
         with:
-          cmd: yq -I=0 '.cd.runner_set' .github/cloudopsworks-ci.yaml
+          cmd: yq -I=0 '.cd.runner_set|"ubuntu-latest"' .github/cloudopsworks-ci.yaml
 
       - name: Get the Runner Set for the environment
         id: runner_set_env
