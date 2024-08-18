@@ -42,7 +42,10 @@ on:
       AWS_EKS_CLUSTER_NAME:
         required: true
         type: string
-
+      AWS_STS_ROLE_ARN:
+        required: false
+        type: string
+        default: ''
     secrets:
       BOT_TOKEN:
         required: true
@@ -50,8 +53,6 @@ on:
         required: true
       AWS_SECRET_ACCESS_KEY:
         required: true
-      AWS_STS_ROLE_ARN:
-        required: false
 
 jobs:
   preview:
