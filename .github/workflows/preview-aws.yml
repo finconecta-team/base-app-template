@@ -50,6 +50,8 @@ on:
         required: true
       AWS_SECRET_ACCESS_KEY:
         required: true
+      AWS_STS_ROLE_ARN:
+        required: false
 
 jobs:
   preview:
@@ -128,8 +130,21 @@ jobs:
           cd charts/$REPOSITORY_NAME
           make tag
 
+      #
+      # Docker Build login AWS - w/Assume Role
+      - name: Configure AWS Credentials with Assume Role
+        if: ${{ inputs.AWS_STS_ROLE_ARN != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ inputs.AWS_STS_ROLE_ARN }}
+          role-session-name: ${{ steps.getowner.outputs.repo_name }}-build
+          aws-region: ${{ inputs.AWS_REGION }}
+
       # Configure AWS context
       - name: Configure AWS
+        if: ${{ inputs.AWS_STS_ROLE_ARN == '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
