@@ -283,7 +283,7 @@ jobs:
       - name: Get pipeline node dist
         id: node_dist
         run: |
-          VAR=$(yq eval '.build.node.dist // "adopt"' ./source/.github/cloudopsworks-ci.yaml)
+          VAL=$(yq eval '.build.node.dist // "adopt"' ./source/.github/cloudopsworks-ci.yaml)
           echo "result=$VAL" >> $GITHUB_OUTPUT
       # Setup Node JS for builds with version provided
       - name: Set Node Version
@@ -296,13 +296,13 @@ jobs:
       - name: Get pipeline Java version
         id: java_version
         run: |
-          VAR=$(yq e '.build.java.version // "17"' ./source/.github/cloudopsworks-ci.yaml)
+          VAL=$(yq e '.build.java.version // "17"' ./source/.github/cloudopsworks-ci.yaml)
           echo "result=$VAL" >> $GITHUB_OUTPUT
       # Get pipeline conf java dist
       - name: Get pipeline Java dist
         id: java_dist
         run: |
-          VAR=$(yq e '.build.java.dist // "adopt"' ./source/.github/cloudopsworks-ci.yaml)
+          VAL=$(yq e '.build.java.dist // "adopt"' ./source/.github/cloudopsworks-ci.yaml)
           echo "result=$VAL" >> $GITHUB_OUTPUT
       # Setup Java JDK for builds
       - name: Set JDK
