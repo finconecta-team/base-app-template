@@ -247,7 +247,7 @@ jobs:
       - name: Install runner-tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq nodejs npm 
+          sudo apt-get install -y gh jq nodejs npm curl wget zip unzip 
           sudo add-apt-repository ppa:rmescandon/yq
           sudo apt update
           sudo apt install yq -y
