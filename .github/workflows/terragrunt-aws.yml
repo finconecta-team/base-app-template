@@ -290,7 +290,9 @@ jobs:
       - name: Terragrunt Apply
         id: apply
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
-        run: terragrunt --terragrunt-non-interactive apply -no-color plan.tfplan
+        run: |
+          export TRACE=1
+          terragrunt --terragrunt-non-interactive apply -no-color plan.tfplan
         continue-on-error: false
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
