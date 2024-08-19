@@ -276,15 +276,15 @@ jobs:
       # Get pipeline conf node version
       - name: Get pipeline node version
         id: node_version
-        uses: mikefarah/yq@master
-        with:
-          cmd: yq eval '.build.node.version // "20"' ./source/.github/cloudopsworks-ci.yaml
+        run: | 
+          VAL=$(yq eval '.build.node.version // "20"' ./source/.github/cloudopsworks-ci.yaml)
+          echo "result=$VAL" >> $GITHUB_ENV
       # Get pipeline conf node dist
       - name: Get pipeline node dist
         id: node_dist
-        uses: mikefarah/yq@master
-        with:
-          cmd: yq eval '.build.node.dist // "adopt"' ./source/.github/cloudopsworks-ci.yaml
+        run: |
+          VAR=$(yq eval '.build.node.dist // "adopt"' ./source/.github/cloudopsworks-ci.yaml)
+          echo "result=$VAL" >> $GITHUB_ENV
       # Setup Node JS for builds with version provided
       - name: Set Node Version
         uses: actions/setup-node@v4
@@ -295,15 +295,15 @@ jobs:
       # Get pipeline conf java version
       - name: Get pipeline Java version
         id: java_version
-        uses: mikefarah/yq@master
-        with:
-          cmd: yq e '.build.java.version // "17"' ./source/.github/cloudopsworks-ci.yaml
+        run: |
+          VAR=$(yq e '.build.java.version // "17"' ./source/.github/cloudopsworks-ci.yaml)
+          echo "result=$VAL" >> $GITHUB_ENV
       # Get pipeline conf java dist
       - name: Get pipeline Java dist
         id: java_dist
-        uses: mikefarah/yq@master
-        with:
-          cmd: yq e '.build.java.dist // "adopt"' ./source/.github/cloudopsworks-ci.yaml
+        run: |
+          VAR=$(yq e '.build.java.dist // "adopt"' ./source/.github/cloudopsworks-ci.yaml)
+          echo "result=$VAL" >> $GITHUB_ENV
       # Setup Java JDK for builds
       - name: Set JDK
         uses: actions/setup-java@v4
