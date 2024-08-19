@@ -246,12 +246,10 @@ jobs:
     steps:
       - name: Install runner-tools
         run: |
-          sudo add-apt-repository ppa:rmescandon/yq
           (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
           && sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && \
           sudo chmod +x /usr/bin/yq
-          sudo apt install -y gh jq nodejs npm curl wget zip unzip 
-          sudo apt install yq -y
+          sudo apt install -y gh jq curl zip unzip
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
@@ -273,6 +271,46 @@ jobs:
         with:
           name: plan-file-aws-${{ inputs.target_cloud_type }}
           path: cd-${{ inputs.environment }}
+
+      ### DEV TOOLS
+      # Get pipeline conf node version
+      - name: Get pipeline node version
+        id: node_version
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq eval '.build.node.version // "20"' ./source/.github/cloudopsworks-ci.yaml
+      # Get pipeline conf node dist
+      - name: Get pipeline node dist
+        id: node_dist
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq eval '.build.node.dist // "adopt"' ./source/.github/cloudopsworks-ci.yaml
+      # Setup Node JS for builds with version provided
+      - name: Set Node Version
+        uses: actions/setup-node@v4
+        with:
+          node-version: "${{ steps.node_version.outputs.result }}"
+          check-latest: true
+          token: ${{ secrets.BOT_TOKEN }}
+      # Get pipeline conf java version
+      - name: Get pipeline Java version
+        id: java_version
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq e '.build.java.version // "17"' ./source/.github/cloudopsworks-ci.yaml
+      # Get pipeline conf java dist
+      - name: Get pipeline Java dist
+        id: java_dist
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq e '.build.java.dist // "adopt"' ./source/.github/cloudopsworks-ci.yaml
+      # Setup Java JDK for builds
+      - name: Set JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: "${{ steps.java_version.outputs.result }}"
+          distribution: "${{ steps.java_dist.outputs.result }}"
+      ### DEV TOOLS
 
       - name: Setup OpenTofu
         id: setup_opentofu
