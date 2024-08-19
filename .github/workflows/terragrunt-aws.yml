@@ -253,7 +253,7 @@ jobs:
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip awscliv2.zip
           sudo ./aws/install
-          curl -L https://aka.ms/InstallAzureCli | bash
+          curl -L https://aka.ms/InstallAzureCli | sudo bash
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
