@@ -51,9 +51,9 @@ terraform {
 inputs = {
   org = {
     organization_name = local.base_vars.organization_name
-    organization_unit = local.base_vars.repository_owner
+    organization_unit = local.base_vars.organization_unit
     environment_name  = local.base_vars.environment_name
-    environment_type  = local.base_vars.namespace
+    environment_type  = local.local_vars.enviornment
   }
   repository_owner   = local.base_vars.repository_owner
   region             = local.global_vars.default.region
