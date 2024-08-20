@@ -126,8 +126,9 @@ jobs:
           script: |
             const deployments = JSON.parse('${{ steps.deploy_conf.outputs.result }}');
             const head = '${{ github.head_ref }}';
+            const base = '${{ github.base_ref }}';
             const ref = '${{ github.ref_name }}';
-            var branch = ref;
+            var branch = head !== '' ? head : ref;
 
             var environment = '';
             var isRelease = false;
