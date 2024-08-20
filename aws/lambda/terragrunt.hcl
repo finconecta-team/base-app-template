@@ -24,9 +24,9 @@ inputs = {
     organization_name = local.base_vars.organization_name
     organization_unit = local.base_vars.organization_unit
     environment_name  = local.base_vars.environment_name
-    environment_type  = local.local_vars.enviornment
+    environment_type  = local.local_vars.environment
   }
-  namespace        = local.local_vars.enviornment
+  namespace        = local.local_vars.environment
   repository_owner = local.base_vars.repository_owner
   lambda           = local.local_vars.lambda
   release          = local.release_vars.release
