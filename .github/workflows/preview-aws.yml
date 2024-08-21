@@ -42,7 +42,10 @@ on:
       AWS_EKS_CLUSTER_NAME:
         required: true
         type: string
-
+      AWS_STS_ROLE_ARN:
+        required: false
+        type: string
+        default: ''
     secrets:
       BOT_TOKEN:
         required: true
@@ -55,7 +58,17 @@ jobs:
   preview:
     runs-on: ${{ inputs.runner_set }}
     steps:
-      # Proceed with checkout of source with all the references (depth=0)  
+      - name: Install runner-tools
+        run: |
+          (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
+          && sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && \
+          sudo chmod +x /usr/bin/yq
+          sudo apt install -y gh jq curl zip unzip python3 python3-pip
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -qo awscliv2.zip
+          sudo ./aws/install
+
+      # Proceed with checkout of source with all the references (depth=0)
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -71,30 +84,30 @@ jobs:
       # Get pipeline conf
       - name: Get pipeline docker enable
         id: pipeline_docker
-        uses: mikefarah/yq@master
-        with:
-          cmd: yq eval '.pipeline[]' ./.github/cloudopsworks-ci.yaml | grep docker | wc -l
+        run: |
+          VAL=$(yq eval '.pipeline[]' ./.github/cloudopsworks-ci.yaml | grep docker | wc -l)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
 
       # Get pipeline conf
       - name: Get pipeline preview enabled
         id: has_preview
-        uses: mikefarah/yq@master
-        with:
-          cmd: yq eval '.cd.preview.enable' ./.github/cloudopsworks-ci.yaml | grep true | wc -l
+        run: |
+          VAL=$(yq eval '.cd.preview.enable' ./.github/cloudopsworks-ci.yaml | grep true | wc -l)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
 
       # Get pipeline conf
       - name: Get pipeline preview enabled
         id: preview_domain
-        uses: mikefarah/yq@master
-        with:
-          cmd: yq eval '.cd.preview.domain' ./.github/cloudopsworks-ci.yaml
+        run: |
+          VAL=$(yq eval '.cd.preview.domain' ./.github/cloudopsworks-ci.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
 
       # Get pipeline conf
       - name: Get pipeline helm enable
         id: pipeline_helm
-        uses: mikefarah/yq@master
-        with:
-          cmd: yq eval '.pipeline[]' ./.github/cloudopsworks-ci.yaml | grep helm | wc -l
+        run: |
+          VAL=$(yq eval '.pipeline[]' ./.github/cloudopsworks-ci.yaml | grep helm | wc -l)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
 
       # Get the owner repo
       - name: Get owner
@@ -128,8 +141,21 @@ jobs:
           cd charts/$REPOSITORY_NAME
           make tag
 
+      #
+      # Docker Build login AWS - w/Assume Role
+      - name: Configure AWS Credentials with Assume Role
+        if: ${{ inputs.AWS_STS_ROLE_ARN != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ inputs.AWS_STS_ROLE_ARN }}
+          role-session-name: ${{ steps.getowner.outputs.repo_name }}-build
+          aws-region: ${{ inputs.AWS_REGION }}
+
       # Configure AWS context
       - name: Configure AWS
+        if: ${{ inputs.AWS_STS_ROLE_ARN == '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -138,7 +164,7 @@ jobs:
 
       # Preview install
       - name: Run Preview Install AWS
-        if: steps.pipeline_helm.outputs.result == 1
+        #if: steps.pipeline_helm.outputs.result == 1
         env:
           # AWS_REGION: ${{ vars.AWS_REGION }}
           # AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -157,7 +183,7 @@ jobs:
           make preview
                   
       - name: Report Preview deployment and URL
-        if: steps.pipeline_helm.outputs.result == 1
+        #if: steps.pipeline_helm.outputs.result == 1
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.BOT_TOKEN }}

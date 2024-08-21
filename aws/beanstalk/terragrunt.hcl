@@ -22,12 +22,12 @@ terraform {
 inputs = {
   org = {
     organization_name = local.base_vars.organization_name
-    organization_unit = local.base_vars.repository_owner
+    organization_unit = local.base_vars.organization_unit
     environment_name  = local.base_vars.environment_name
-    environment_type  = local.base_vars.namespace
+    environment_type  = local.local_vars.environment
   }
   repository_owner = local.base_vars.repository_owner
-  namespace        = local.base_vars.namespace
+  namespace        = local.local_vars.environment
   versions_bucket  = local.local_vars.versions_bucket
   logs_bucket      = try(local.local_vars.logs_bucket, "")
   region           = local.global_vars.default.region

@@ -99,6 +99,7 @@ jobs:
       deployment_name: ${{ inputs.deployment_name }}
       target_cloud: 'aws'
       target_cloud_type: 'beanstalk'
+      runner_set: ${{ inputs.runner_set }}
       DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
       HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
       BOT_USER: ${{ inputs.BOT_USER }}
@@ -119,6 +120,7 @@ jobs:
       deployment_name: ${{ inputs.deployment_name }}
       target_cloud: 'aws'
       target_cloud_type: 'kubernetes'
+      runner_set: ${{ inputs.runner_set }}
       DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
       HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
       BOT_USER: ${{ inputs.BOT_USER }}
@@ -139,6 +141,7 @@ jobs:
       deployment_name: ${{ inputs.deployment_name }}
       target_cloud: 'aws'
       target_cloud_type: 'lambda'
+      runner_set: ${{ inputs.runner_set }}
       DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
       HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
       BOT_USER: ${{ inputs.BOT_USER }}
@@ -158,6 +161,7 @@ jobs:
       package_type: ${{ inputs.package_type }}
       deployment_name: ${{ inputs.deployment_name }}
       target_cloud: 'aws'
+      runner_set: ${{ inputs.runner_set }}
       BOT_USER: ${{ inputs.BOT_USER }}
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}

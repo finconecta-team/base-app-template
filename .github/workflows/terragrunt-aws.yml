@@ -244,6 +244,15 @@ jobs:
     runs-on: ${{ inputs.runner_set }}
     environment: ${{ inputs.deployment_name }}
     steps:
+      - name: Install runner-tools
+        run: |
+          (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
+          && sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && \
+          sudo chmod +x /usr/bin/yq
+          sudo apt install -y gh jq curl zip unzip python3 python3-pip
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -qo awscliv2.zip
+          sudo ./aws/install
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
@@ -265,6 +274,46 @@ jobs:
         with:
           name: plan-file-aws-${{ inputs.target_cloud_type }}
           path: cd-${{ inputs.environment }}
+
+      ### DEV TOOLS
+      # Get pipeline conf node version
+      - name: Get pipeline node version
+        id: node_version
+        run: | 
+          VAL=$(yq eval '.build.node.version // "20"' ./source/.github/cloudopsworks-ci.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+      # Get pipeline conf node dist
+      - name: Get pipeline node dist
+        id: node_dist
+        run: |
+          VAL=$(yq eval '.build.node.dist // "adopt"' ./source/.github/cloudopsworks-ci.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+      # Setup Node JS for builds with version provided
+      - name: Set Node Version
+        uses: actions/setup-node@v4
+        with:
+          node-version: "${{ steps.node_version.outputs.result }}"
+          check-latest: true
+          token: ${{ secrets.BOT_TOKEN }}
+      # Get pipeline conf java version
+      - name: Get pipeline Java version
+        id: java_version
+        run: |
+          VAL=$(yq e '.build.java.version // "17"' ./source/.github/cloudopsworks-ci.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+      # Get pipeline conf java dist
+      - name: Get pipeline Java dist
+        id: java_dist
+        run: |
+          VAL=$(yq e '.build.java.dist // "adopt"' ./source/.github/cloudopsworks-ci.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+      # Setup Java JDK for builds
+      - name: Set JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: "${{ steps.java_version.outputs.result }}"
+          distribution: "${{ steps.java_dist.outputs.result }}"
+      ### DEV TOOLS
 
       - name: Setup OpenTofu
         id: setup_opentofu
