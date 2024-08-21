@@ -739,7 +739,7 @@ jobs:
         if: ${{ steps.repo_type.outputs.result == 'iac' }}
         uses: mikefarah/yq@master
         with:
-          cmd: yq -i '.on.workflow_dispatch.inputs.environment.options = ${{ steps.env_setup.outputs.env_list }}' .github/workflows/deploy.yml
+          cmd: yq -i '.on.workflow_dispatch.inputs.environment.options = ${{ steps.envs.outputs.env_list }}' .github/workflows/deploy.yml
 
 
       # Modify deploy YML wit yq command in order to insert the output from terragrunt_folders script
