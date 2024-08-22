@@ -1,3 +1,4 @@
+environment: "ENV"
 # This file contains the environment variables for the Kubernetes deployment
 container_registry: REGISTRY
 cluster_name: CLUSTER_NAME

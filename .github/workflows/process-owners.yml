@@ -83,6 +83,15 @@ jobs:
         with:
           cmd: yq -o=json -I=0 '.cd.deployments' .github/cloudopsworks-ci.yaml
 
+      - name: Get repository type
+        id: repo_type
+        run: |
+          if [ -f .github/.iac ]; then
+            echo "result=iac" >> $GITHUB_OUTPUT
+          else
+            echo "result=sourcecode" >> $GITHUB_OUTPUT
+          fi
+
       - name: Contributor list form JSON
         uses: actions/github-script@v7
         with:
@@ -139,6 +148,7 @@ jobs:
             const contrib_json = contrib_text != null ? JSON.parse('${{ steps.contrib_list.outputs.result }}') : {};
             const reviewers_count = ${{ steps.reviewers_count.outputs.result }};
             const actor = context.actor;
+            const is_iac = '${{ steps.repo_type.outputs.result }}' === 'iac';
             
             // Get reviewers list
             var reviewers = [];
@@ -296,6 +306,11 @@ jobs:
                   }
                 `;
               }
+            
+              var run_context = ['plan / on-pr'];
+              if ( is_iac ) {
+                run_context = 'plan';
+              }
               
               const vars = {
                 repo_id: repo_result.repository.id,
@@ -305,7 +320,7 @@ jobs:
                 reviewers_count: default_count,
                 admin_ids: owners_ids,
                 reviewers_ids: reviewers_ids,
-                contexts: [ "plan / on-pr" ],
+                contexts: run_context,
                 can_delete: can_delete
               };
               await github.graphql(protection_rule, vars);
@@ -631,7 +646,9 @@ jobs:
                   repo_id: repo_result.repository.id,
                   env: env_key
                 };
-                env_id = (await github.graphql(env_query, env_vars).environment.id);
+                const env_data = (await github.graphql(env_query, env_vars));
+                console.debug("env_data: " + JSON.stringify(env_data));
+                env_id = env_data.createEnvironment.environment.id;
               } else {
                 console.debug("env_obj: " + JSON.stringify(env_obj));
                 env_id = env_obj.id
@@ -723,7 +740,17 @@ jobs:
 
       # Modify deploy YML wit yq command in order to insert the output from terragrunt_folders script
       # into the deploy.yml file on the yaml address: on.workflow_dispatch.inputs.working_directory.options
+      - name: Modify deploy.yml with Environment List
+        if: ${{ steps.repo_type.outputs.result == 'iac' }}
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -i '.on.workflow_dispatch.inputs.environment.options = ${{ steps.envs.outputs.env_list }}' .github/workflows/deploy.yml
+
+
+      # Modify deploy YML wit yq command in order to insert the output from terragrunt_folders script
+      # into the deploy.yml file on the yaml address: on.workflow_dispatch.inputs.working_directory.options
       - name: Modify destroy-environment.yml with env_list
+        if: ${{ steps.repo_type.outputs.result == 'sourcecode' }}
         uses: mikefarah/yq@master
         with:
           cmd: yq -i '.on.workflow_dispatch.inputs.destroyedDeploymentName.options = ${{ steps.envs.outputs.env_list }}' .github/workflows/destroy-environment.yml
@@ -734,6 +761,6 @@ jobs:
         run: |
           git config --global user.name "${{ vars.BOT_USER }}"
           git config --global user.email "${{ vars.BOT_EMAIL }}"
-          git add .github/workflows/destroy-environment.yml
-          git commit -m "chore: Update destroy-environment.yml with all environments set"
+          git add .github/workflows/*
+          git commit -m "chore: Update workflow files with all environments set"
           git push origin ${{ github.head_ref }}

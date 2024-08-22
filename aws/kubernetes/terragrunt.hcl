@@ -51,21 +51,21 @@ terraform {
 inputs = {
   org = {
     organization_name = local.base_vars.organization_name
-    organization_unit = local.base_vars.repository_owner
+    organization_unit = local.base_vars.organization_unit
     environment_name  = local.base_vars.environment_name
-    environment_type  = local.base_vars.namespace
+    environment_type  = local.local_vars.environment
   }
-  repository_owner   = local.base_vars.repository_owner
-  region             = local.global_vars.default.region
-  sts_assume_role    = local.global_vars.default.sts_role_arn
-  release            = local.release_vars.release
-  namespace          = local.local_vars.namespace
-  cluster_name       = local.local_vars.cluster_name
-  helm_repo_url      = try(local.local_vars.helm_repo_url, "")
-  helm_chart_name    = try(local.local_vars.helm_chart_name, "")
-  helm_chart_path    = try(local.local_vars.helm_chart_path, "")
-  values_file        = local.values_file
-  values_overrides   = merge(
+  repository_owner = local.base_vars.repository_owner
+  region           = local.global_vars.default.region
+  sts_assume_role  = local.global_vars.default.sts_role_arn
+  release          = local.release_vars.release
+  namespace        = local.local_vars.namespace
+  cluster_name     = local.local_vars.cluster_name
+  helm_repo_url    = try(local.local_vars.helm_repo_url, "")
+  helm_chart_name  = try(local.local_vars.helm_chart_name, "")
+  helm_chart_path  = try(local.local_vars.helm_chart_path, "")
+  values_file      = local.values_file
+  values_overrides = merge(
     local.local_vars.helm_values_overrides,
     {
       "image.tag" = local.release_vars.release.source.version
