@@ -39,6 +39,10 @@ on:
       AZ_AKS_CLUSTER_NAME:
         required: true
         type: string
+      RANCHER_PROJECT_ID:
+        required: false
+        type: string
+        default: ''
 
     secrets:
       BOT_TOKEN:
@@ -146,6 +150,7 @@ jobs:
           REPOSITORY_OWNER: ${{ steps.getowner.outputs.owner }}
           REPOSITORY_NAME: ${{ steps.getowner.outputs.repo_name }}
           TARGET_CLOUD: ${{ inputs.TARGET_CLOUD }}
+          RANCHER_PROJECT_ID: ${{ inputs.RANCHER_PROJECT_ID }}
         run: |
           cd charts/$REPOSITORY_NAME
           make tag
@@ -162,6 +167,7 @@ jobs:
           REPOSITORY_NAME: ${{ steps.getowner.outputs.repo_name }}
           PR_NAME: ${{ inputs.pr_name }}
           PREVIEW_DOMAIN_NAME: ${{ steps.preview_domain.outputs.result }}
+          RANCHER_PROJECT_ID: ${{ inputs.RANCHER_PROJECT_ID }}
         run: |
           cd charts/preview
           make preview
