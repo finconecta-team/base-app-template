@@ -54,6 +54,7 @@ spec:
         - containerPort: {{ .Values.service.internalPort }}
         livenessProbe:
           httpGet:
+            scheme: {{ .Values.livenessProbe.scheme }}
             path: {{ .Values.probePath }}
 {{- if .Values.livenessProbe.port }}
             port: {{ .Values.livenessProbe.port }}
@@ -66,6 +67,7 @@ spec:
           timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
         readinessProbe:
           httpGet:
+            scheme: {{ .Values.readinessProbe.scheme }}
             path: {{ .Values.probePath }}
 {{- if .Values.readinessProbe.port }}
             port: {{ .Values.readinessProbe.port }}
@@ -78,6 +80,7 @@ spec:
 {{- if .Values.startupProbe.enabled }}
         startupProbe:
           httpGet:
+            scheme: {{ .Values.startupProbe.scheme }}
             path: {{ .Values.probePath }}
 {{- if .Values.startupProbe.port }}
             port: {{ .Values.startupProbe.port }}
