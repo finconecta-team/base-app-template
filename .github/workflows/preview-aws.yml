@@ -58,8 +58,13 @@ on:
       AWS_SECRET_ACCESS_KEY:
         required: true
 
+env:
+  tofu_version: 1.7.1
+  tg_version: 0.59.5
+  base_app_version: 3
+  tf_summarize_version: 0.3.10
 jobs:
-  preview:
+  preview-plan:
     runs-on: ${{ inputs.runner_set }}
     steps:
       - name: Install runner-tools
@@ -73,45 +78,21 @@ jobs:
           sudo ./aws/install
 
       # Proceed with checkout of source with all the references (depth=0)
-      - uses: actions/checkout@v4
+      - name: Checkout source code
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          ref: ${{ inputs.ref }}
+          path: source
+          fetch-depth: 1
           token: ${{ secrets.BOT_TOKEN }}
 
-      # Kubernetes cli
-      - uses: azure/setup-kubectl@v3
-      
-      # Helm Chart build & deploy Support
-      - uses: azure/setup-helm@v3
-
-      # Get pipeline conf
-      - name: Get pipeline docker enable
-        id: pipeline_docker
-        run: |
-          VAL=$(yq eval '.pipeline[]' ./.github/cloudopsworks-ci.yaml | grep docker | wc -l)
-          echo "result=$VAL" >> $GITHUB_OUTPUT
-
-      # Get pipeline conf
-      - name: Get pipeline preview enabled
-        id: has_preview
-        run: |
-          VAL=$(yq eval '.cd.preview.enable' ./.github/cloudopsworks-ci.yaml | grep true | wc -l)
-          echo "result=$VAL" >> $GITHUB_OUTPUT
-
-      # Get pipeline conf
-      - name: Get pipeline preview enabled
-        id: preview_domain
-        run: |
-          VAL=$(yq eval '.cd.preview.domain' ./.github/cloudopsworks-ci.yaml)
-          echo "result=$VAL" >> $GITHUB_OUTPUT
-
-      # Get pipeline conf
-      - name: Get pipeline helm enable
-        id: pipeline_helm
-        run: |
-          VAL=$(yq eval '.pipeline[]' ./.github/cloudopsworks-ci.yaml | grep helm | wc -l)
-          echo "result=$VAL" >> $GITHUB_OUTPUT
+      - name: Checkout Base App Template
+        uses: actions/checkout@v4
+        with:
+          repository: cloudopsworks/base-app-template
+          path: cd-preview
+          fetch-depth: 1
+          ref: v${{ env.base_app_version }}
+          token: ${{ secrets.BOT_TOKEN }}
 
       # Get the owner repo
       - name: Get owner
@@ -122,72 +103,236 @@ jobs:
           echo "owner=$repo_owner" >> $GITHUB_OUTPUT
           echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
 
-      # Create a VERSION file to use through the build
-      - name: Set Version File for a Release
-        env:
-          NEXT_VERSION: "${{ inputs.semver }}"
+      - name: Get Preview Domain
+        id: preview_domain
         run: |
-          echo -n "$NEXT_VERSION" > VERSION
+          VAL=$(yq e '.cd.preview.domain' source/.github/cloudopsworks-ci.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
 
-      #
-      # Helm tag pull request version
-      #
-      - name: Helm Build Preview
-        if: steps.pipeline_helm.outputs.result == 1
-        env:
-          HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
-          DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
-          HELM_EXPERIMENTAL_OCI: "1"
-          REPOSITORY_OWNER: ${{ steps.getowner.outputs.owner }}
-          REPOSITORY_NAME: ${{ steps.getowner.outputs.repo_name }}
-          TARGET_CLOUD: ${{ inputs.TARGET_CLOUD }}
-          RANCHER_PROJECT_ID: ${{ inputs.RANCHER_PROJECT_ID }}
-        run: |
-          cd charts/$REPOSITORY_NAME
-          make tag
-
-      #
-      # Docker Build login AWS - w/Assume Role
-      - name: Configure AWS Credentials with Assume Role
-        if: ${{ inputs.AWS_STS_ROLE_ARN != '' }}
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Terraform Plan prettifier
+        uses: kishaningithub/setup-tf-summarize@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          role-to-assume: ${{ inputs.AWS_STS_ROLE_ARN }}
-          role-session-name: ${{ steps.getowner.outputs.repo_name }}-build
-          aws-region: ${{ inputs.AWS_REGION }}
+          github-token: ${{ secrets.BOT_TOKEN }}
+          tf-summarize-version: v${{ env.tf_summarize_version }}
 
-      # Configure AWS context
-      - name: Configure AWS
-        if: ${{ inputs.AWS_STS_ROLE_ARN == '' }}
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Setup OpenTofu
+        id: setup_opentofu
+        uses: opentofu/setup-opentofu@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ inputs.AWS_REGION }}
+          tofu_version: ${{ env.tofu_version }}
+          tofu_wrapper: false
 
-      # Preview install
-      - name: Run Preview Install AWS
-        #if: steps.pipeline_helm.outputs.result == 1
-        env:
-          # AWS_REGION: ${{ vars.AWS_REGION }}
-          # AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          # AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
-          DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
-          HELM_EXPERIMENTAL_OCI: "1"
-          REPOSITORY_OWNER: ${{ steps.getowner.outputs.owner }}
-          REPOSITORY_NAME: ${{ steps.getowner.outputs.repo_name }}
-          PR_NAME: ${{ inputs.pr_name }}
-          PREVIEW_DOMAIN_NAME: ${{ steps.preview_domain.outputs.result }}
-          CLUSTER_NAME: ${{ inputs.AWS_EKS_CLUSTER_NAME }}
-          RANCHER_PROJECT_ID: ${{ inputs.RANCHER_PROJECT_ID }}
+      - name: Setup Terragrunt v${{ env.tg_version }}
         run: |
-          cd charts/preview
-          aws eks update-kubeconfig --name $CLUSTER_NAME
-          make preview
-                  
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.tg_version }}/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+          terragrunt -v
+
+      - name: Copy configurations
+        run: |
+          cp -pf source/.github/vars/preview/inputs.yaml cd-preview/aws/kubernetes/inputs.yaml
+          cp -pf source/.github/vars/inputs-global.yaml cd-preview/aws/kubernetes/inputs-global.yaml
+          yq e '.helm_values_overrides += { "image.repository": "${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ steps.getowner.outputs.owner }}/${{ steps.getowner.outputs.repo_name }}" }' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.helm_values_overrides += { "ingress.host": "${{ steps.getowner.outputs.repo_name }}-${{ inputs.pr_name }}.${{ steps.preview_domain.outputs.result }}" }' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.helm_values_overrides += { "ingress.rules[0].host": "${{ steps.getowner.outputs.repo_name }}-${{ inputs.pr_name }}.${{ steps.preview_domain.outputs.result }}" }' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.helm_values_overrides += { "ingress.annotations.cert-manager\\.io/cluster-issuer":"letsencrypt-prod" }' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.helm_values_overrides += { "ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/ssl-redirect":"true" }' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.helm_values_overrides += { "ingress.tls.secretName":"${{ steps.getowner.outputs.repo_name }}-${{ inputs.pr_name }}-tls"}' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.helm_values_overrides += { "ingress.tls.enabled":true}' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.namespace_annotations += { "field.cattle.io/projectId": "${{ inputs.RANCHER_PROJECT_ID }}" }' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.container_registry = "${{ inputs.DOCKER_REGISTRY_ADDRESS }}"' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.cluster_name = "${{ inputs.AWS_EKS_CLUSTER_NAME }}"' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.namespace = "${{ steps.getowner.outputs.repo_name }}-${{ inputs.pr_name }}"' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.create_namespace = true' -i cd-preview/aws/kubernetes/inputs.yaml
+
+      - name: Copy Values Bundle
+        run: |
+          cp -pf source/.github/vars/preview/values.yaml cd-preview/aws/kubernetes/helm-values.yaml
+          mkdir -p cd-preview/aws/kubernetes/values/
+          if [ -d source/.github/vars/preview/values ]; then
+            cp -pfR source/.github/vars/preview/values/ cd-preview/aws/kubernetes/
+          else
+            echo "No values found for source/.github/vars/preview/values, skipping..."
+            touch cd-preview/aws/kubernetes/values/.empty
+          fi
+
+      - name: Generate release.yaml
+        working-directory: cd-preview/aws/kubernetes
+        run: |
+          cat > release.yaml << EOF 
+          release:
+            name: preview
+            source:
+              name: ${{ steps.getowner.outputs.repo_name }}
+              version: ${{ inputs.semver }}
+          EOF
+
+      - name: Generate Global Inputs global-inputs.yaml
+        working-directory: cd-preview/aws
+        run: |
+          cat > global-inputs.yaml << EOF
+          environment: preview
+          release_name: ${{ steps.getowner.outputs.repo_name }}-${{ inputs.pr_name }}
+          default:
+            region: ${{ inputs.AWS_REGION }}
+            sts_role_arn: ${{ inputs.AWS_STS_ROLE_ARN }}
+          EOF
+
+      - name: Generate state_conf.yaml from vars.DEPLOYMENT_STATE_CONF
+        working-directory: cd-preview/aws
+        run: |
+          cat > state_conf.yaml << EOF
+          ${{ vars.DEPLOYMENT_STATE_CONF }}
+          EOF
+
+      - name: Terragrunt Plan
+        id: plan
+        working-directory: cd-preview/aws/kubernetes
+        run: terragrunt --terragrunt-non-interactive plan -no-color -input=false
+        continue-on-error: false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          HELM_CREDS_USER: ${{ secrets.AZURE_SERVICE_ID }}
+          HELM_CREDS_PASSWORD: ${{ secrets.AZURE_SERVICE_SECRET }}
+          HELM_EXPERIMENTAL_OCI: "1"
+          GITHUB_API_TOKEN: ${{ secrets.BOT_TOKEN }}
+
+      - name: Terragrunt Plan to JSON
+        working-directory: cd-preview/aws/kubernetes
+        run: terragrunt --terragrunt-non-interactive show -json plan.tfplan > tfplan.json
+        continue-on-error: true
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GITHUB_API_TOKEN: ${{ secrets.BOT_TOKEN }}
+
+      - name: TF Summarize of JSON file
+        working-directory: cd-preview/aws/kubernetes
+        run: tf-summarize tfplan.json
+
+      - name: Save Plan File
+        uses: actions/upload-artifact@v4
+        with:
+          name: plan-file-aws-kubernetes
+          retention-days: 1
+          path: |
+            cd-preview/**/values/**/*
+            cd-preview/**/.values_hash_*
+            cd-preview/**/*.yaml
+            cd-preview/**/plan.tfplan
+            !cd-preview/**/.terragrunt-cache/**/*
+            !cd-preview/**/helm/charts/**/*
+
+  preview-apply:
+    needs:
+      - preview-plan
+    runs-on: ${{ inputs.runner_set }}
+    environment: preview
+    steps:
+      - name: Install runner-tools
+        run: |
+          (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
+          && sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && \
+          sudo chmod +x /usr/bin/yq
+          sudo apt install -y gh jq curl zip unzip python3 python3-pip
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -qo awscliv2.zip
+          sudo ./aws/install
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          path: source
+          fetch-depth: 1
+          token: ${{ secrets.BOT_TOKEN }}
+
+      # Proceed with checkout of source with all the references (depth=0)
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          path: source
+          fetch-depth: 1
+          token: ${{ secrets.BOT_TOKEN }}
+
+      - name: Checkout Base App Template
+        uses: actions/checkout@v4
+        with:
+          repository: cloudopsworks/base-app-template
+          path: cd-preview
+          fetch-depth: 1
+          ref: v${{ env.base_app_version }}
+          token: ${{ secrets.BOT_TOKEN }}
+
+      - name: Restore Plan File
+        uses: actions/download-artifact@v4
+        with:
+          name: plan-file-aws-kubernetes
+          path: cd-preview
+
+      ### DEV TOOLS
+      # Get pipeline conf node version
+      - name: Get pipeline node version
+        id: node_version
+        run: |
+          VAL=$(yq eval '.build.node.version // "20"' ./source/.github/cloudopsworks-ci.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+      # Get pipeline conf node dist
+      - name: Get pipeline node dist
+        id: node_dist
+        run: |
+          VAL=$(yq eval '.build.node.dist // "adopt"' ./source/.github/cloudopsworks-ci.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+      # Setup Node JS for builds with version provided
+      - name: Set Node Version
+        uses: actions/setup-node@v4
+        with:
+          node-version: "${{ steps.node_version.outputs.result }}"
+          check-latest: true
+          token: ${{ secrets.BOT_TOKEN }}
+      # Get pipeline conf java version
+      - name: Get pipeline Java version
+        id: java_version
+        run: |
+          VAL=$(yq e '.build.java.version // "17"' ./source/.github/cloudopsworks-ci.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+      # Get pipeline conf java dist
+      - name: Get pipeline Java dist
+        id: java_dist
+        run: |
+          VAL=$(yq e '.build.java.dist // "adopt"' ./source/.github/cloudopsworks-ci.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+      # Setup Java JDK for builds
+      - name: Set JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: "${{ steps.java_version.outputs.result }}"
+          distribution: "${{ steps.java_dist.outputs.result }}"
+      ### DEV TOOLS
+
+      - name: Setup OpenTofu
+        id: setup_opentofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.tofu_version }}
+          tofu_wrapper: false
+
+      - name: Setup Terragrunt v${{ env.tg_version }}
+        run: |
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.tg_version }}/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+          terragrunt -v
+
+      - name: Terragrunt Apply
+        id: apply
+        working-directory: cd-preview/aws/kubernetes
+        run: terragrunt --terragrunt-non-interactive apply -no-color plan.tfplan
+        continue-on-error: false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          HELM_EXPERIMENTAL_OCI: "1"
+          GITHUB_API_TOKEN: ${{ secrets.BOT_TOKEN }}
+
       - name: Report Preview deployment and URL
         #if: steps.pipeline_helm.outputs.result == 1
         uses: actions/github-script@v7

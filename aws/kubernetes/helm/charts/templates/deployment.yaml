@@ -43,14 +43,18 @@ spec:
         - name: {{ $pkey }}
           value: {{ quote $pval }}
 {{- end }}
-{{- if .Values.envFrom }}
         envFrom:
+{{- if .Values.envFrom }}
 {{ toYaml .Values.envFrom | indent 10 }}
+{{- end }}
+{{- if .Values.injectEnvFrom }}
+{{ toYaml .Values.injectEnvFrom | indent 10 }}
 {{- end }}
         ports:
         - containerPort: {{ .Values.service.internalPort }}
         livenessProbe:
           httpGet:
+            scheme: {{ .Values.livenessProbe.scheme }}
             path: {{ .Values.probePath }}
 {{- if .Values.livenessProbe.port }}
             port: {{ .Values.livenessProbe.port }}
@@ -63,6 +67,7 @@ spec:
           timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
         readinessProbe:
           httpGet:
+            scheme: {{ .Values.readinessProbe.scheme }}
             path: {{ .Values.probePath }}
 {{- if .Values.readinessProbe.port }}
             port: {{ .Values.readinessProbe.port }}
@@ -75,6 +80,7 @@ spec:
 {{- if .Values.startupProbe.enabled }}
         startupProbe:
           httpGet:
+            scheme: {{ .Values.startupProbe.scheme }}
             path: {{ .Values.probePath }}
 {{- if .Values.startupProbe.port }}
             port: {{ .Values.startupProbe.port }}
@@ -90,6 +96,9 @@ spec:
         volumeMounts: 
           {{- if .Values.additionalVolumeMounts }}
 {{ toYaml .Values.additionalVolumeMounts | indent 10 }}
+          {{- end }}
+          {{- if .Values.injectedVolumeMounts }}
+{{ toYaml .Values.injectedVolumeMounts | indent 10 }}
           {{- end }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       {{- if .Values.affinity }}
@@ -107,4 +116,7 @@ spec:
       volumes:
         {{- if .Values.additionalVolumes }}
 {{ toYaml .Values.additionalVolumes | indent 8 }}
+        {{- end }}
+        {{- if .Values.injectedVolumes }}
+{{ toYaml .Values.injectedVolumes | indent 8 }}
         {{- end }}

@@ -71,9 +71,11 @@ inputs = {
       "image.tag" = local.release_vars.release.source.version
     }
   )
-  container_registry = local.local_vars.container_registry
-  config_map         = local.local_vars.config_map
-  secrets            = local.local_vars.aws
-  absolute_path      = get_terragrunt_dir()
-  extra_tags         = try(local.local_vars.tags, {})
+  container_registry    = local.local_vars.container_registry
+  namespace_annotations = try(local.local_vars.namespace_annotations, {})
+  create_namespace      = try(local.local_vars.create_namespace, false)
+  config_map            = local.local_vars.config_map
+  secrets               = try(local.local_vars.aws, {})
+  absolute_path         = get_terragrunt_dir()
+  extra_tags            = try(local.local_vars.tags, {})
 }

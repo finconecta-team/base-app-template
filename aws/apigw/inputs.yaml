@@ -14,6 +14,10 @@ aws:
   stage_variables:
     vpc_link_name: test-link-dev
     endpoint_url: test-api.dev.sample.com
+  publish_bucket:
+    enabled: false
+    name: test-apigw-backup
+    prefix_path: test
   authorizers:
     - name: Lambda-Auth
       authtype: lambda
