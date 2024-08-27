@@ -227,7 +227,7 @@ jobs:
     needs:
       - preview-plan
     runs-on: ${{ inputs.runner_set }}
-    environment: ${{ inputs.deployment_name }}
+    environment: preview
     steps:
       - name: Install runner-tools
         run: |
