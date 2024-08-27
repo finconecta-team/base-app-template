@@ -213,7 +213,7 @@ jobs:
       - name: Save Plan File
         uses: actions/upload-artifact@v4
         with:
-          name: plan-file-aws-${{ inputs.target_cloud_type }}
+          name: plan-file-aws-kubernetes
           retention-days: 1
           path: |
             cd-preview/**/values/**/*
@@ -244,11 +244,19 @@ jobs:
           fetch-depth: 1
           token: ${{ secrets.BOT_TOKEN }}
 
+      # Proceed with checkout of source with all the references (depth=0)
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          path: source
+          fetch-depth: 1
+          token: ${{ secrets.BOT_TOKEN }}
+
       - name: Checkout Base App Template
         uses: actions/checkout@v4
         with:
           repository: cloudopsworks/base-app-template
-          path: cd-${{ inputs.environment }}
+          path: cd-preview
           fetch-depth: 1
           ref: v${{ env.base_app_version }}
           token: ${{ secrets.BOT_TOKEN }}
@@ -256,8 +264,8 @@ jobs:
       - name: Restore Plan File
         uses: actions/download-artifact@v4
         with:
-          name: plan-file-aws-${{ inputs.target_cloud_type }}
-          path: cd-${{ inputs.environment }}
+          name: plan-file-aws-kubernetes
+          path: cd-preview
 
       ### DEV TOOLS
       # Get pipeline conf node version
