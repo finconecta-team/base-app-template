@@ -92,7 +92,7 @@ jobs:
           path: cd-preview
           fetch-depth: 1
           ref: v${{ env.base_app_version }}
-          token: ${{ secrets.token }}
+          token: ${{ secrets.BOT_TOKEN }}
 
       # Get the owner repo
       - name: Get owner
@@ -189,7 +189,7 @@ jobs:
           HELM_CREDS_USER: ${{ secrets.AZURE_SERVICE_ID }}
           HELM_CREDS_PASSWORD: ${{ secrets.AZURE_SERVICE_SECRET }}
           HELM_EXPERIMENTAL_OCI: "1"
-          GITHUB_API_TOKEN: ${{ secrets.token }}
+          GITHUB_API_TOKEN: ${{ secrets.BOT_TOKEN }}
 
       - name: Terragrunt Plan to JSON
         working-directory: cd-preview/aws/kubernetes
@@ -198,7 +198,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          GITHUB_API_TOKEN: ${{ secrets.token }}
+          GITHUB_API_TOKEN: ${{ secrets.BOT_TOKEN }}
 
       - name: TF Summarize of JSON file
         working-directory: cd-preview/aws/kubernetes
@@ -236,7 +236,7 @@ jobs:
         with:
           path: source
           fetch-depth: 1
-          token: ${{ secrets.token }}
+          token: ${{ secrets.BOT_TOKEN }}
 
       - name: Checkout Base App Template
         uses: actions/checkout@v4
@@ -245,7 +245,7 @@ jobs:
           path: cd-${{ inputs.environment }}
           fetch-depth: 1
           ref: v${{ env.base_app_version }}
-          token: ${{ secrets.token }}
+          token: ${{ secrets.BOT_TOKEN }}
 
       - name: Restore Plan File
         uses: actions/download-artifact@v4
@@ -315,7 +315,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           HELM_EXPERIMENTAL_OCI: "1"
-          GITHUB_API_TOKEN: ${{ secrets.token }}
+          GITHUB_API_TOKEN: ${{ secrets.BOT_TOKEN }}
 
       - name: Report Preview deployment and URL
         #if: steps.pipeline_helm.outputs.result == 1
