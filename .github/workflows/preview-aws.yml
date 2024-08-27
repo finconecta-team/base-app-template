@@ -216,9 +216,9 @@ jobs:
             cd-preview/**/plan.tfplan
             !cd-preview/**/.terragrunt-cache/**/*
 
-  deployment-apply:
+  preview-apply:
     needs:
-      - deployment-plan
+      - preview-plan
     runs-on: ${{ inputs.runner_set }}
     environment: ${{ inputs.deployment_name }}
     steps:
