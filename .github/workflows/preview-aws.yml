@@ -149,7 +149,7 @@ jobs:
           cp -pf source/.github/vars/preview/values.yaml cd-preview/aws/kubernetes/helm-values.yaml
           mkdir -p cd-preview/aws/kubernetes/values/
           if [ -d source/.github/vars/preview/values ]; then
-            cp -pfR source/.github/vars/preview/values/* cd-preview/aws/kubernetes/values/
+            cp -pfR source/.github/vars/preview/values/ cd-preview/aws/kubernetes/
           else
             echo "No values found for source/.github/vars/preview/values, skipping..."
             touch cd-preview/aws/kubernetes/values/.empty
