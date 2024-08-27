@@ -131,11 +131,13 @@ jobs:
       - name: Copy configurations
         run: |
           cp -pf source/.github/vars/preview/inputs.yaml cd-preview/aws/kubernetes/inputs.yaml
-          cp -pf source/.github/vars/inputs-global.yaml cd-preview/aws/kubernetes/
+          cp -pf source/.github/vars/inputs-global.yaml cd-preview/aws/kubernetes/inputs-global.yaml
           yq e '.helm_values_overrides += { "image.repository": "${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ steps.getowner.outputs.owner }}/${{ steps.getowner.outputs.repo_name }}" }' -i cd-preview/aws/kubernetes/inputs.yaml
           yq e '.helm_values_overrides += { "ingress.host": "${{ steps.getowner.outputs.repo_name }}-${{ inputs.pr_name }}.${{ steps.preview_domain.outputs.result }}" }' -i cd-preview/aws/kubernetes/inputs.yaml
-          yq e '.helm_values_overrides += { "ingress.annotations": "cert-manager.io/cluster-issuer":"letsencrypt-prod","nginx.ingress.kubernetes.io/ssl-redirect":"true" }' -i cd-preview/aws/kubernetes/inputs.yaml
-          yq e '.helm_values_overrides += { "ingress.tls": "hosts":["${{ steps.getowner.outputs.repo_name }}-${{ inputs.pr_name }}.${{ steps.preview_domain.outputs.result }}"],"secretName":"${{ steps.getowner.outputs.repo_name }}-${{ inputs.pr_name }}-tls" }' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.helm_values_overrides += { "ingress.annotations.cert-manager\\.io/cluster-issuer":"letsencrypt-prod" }' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.helm_values_overrides += { "ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/ssl-redirect":"true" }' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.helm_values_overrides += { "ingress.tls[0].hosts[0]":"${{ steps.getowner.outputs.repo_name }}-${{ inputs.pr_name }}.${{ steps.preview_domain.outputs.result }}"}' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.helm_values_overrides += { "ingress.tls[0].secretName":"${{ steps.getowner.outputs.repo_name }}-${{ inputs.pr_name }}-tls"}' -i cd-preview/aws/kubernetes/inputs.yaml
           yq e '.namespace_annotations += { "field.cattle.io/projectId": "${{ inputs.RANCHER_PROJECT_ID }}" }' -i cd-preview/aws/kubernetes/inputs.yaml
           yq e '.container_registry = "${{ inputs.DOCKER_REGISTRY_ADDRESS }}"' -i cd-preview/aws/kubernetes/inputs.yaml
           yq e '.cluster_name = "${{ inputs.AWS_EKS_CLUSTER_NAME }}"' -i cd-preview/aws/kubernetes/inputs.yaml
