@@ -221,6 +221,7 @@ jobs:
             cd-preview/**/*.yaml
             cd-preview/**/plan.tfplan
             !cd-preview/**/.terragrunt-cache/**/*
+            !cd-preview/**/helm/charts/**/*
 
   preview-apply:
     needs:
