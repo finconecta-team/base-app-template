@@ -139,7 +139,7 @@ jobs:
           yq e '.namespace_annotations += { "field.cattle.io/projectId": "${{ inputs.RANCHER_PROJECT_ID }}" }' -i cd-preview/aws/kubernetes/inputs.yaml
           yq e '.container_registry = "${{ inputs.DOCKER_REGISTRY_ADDRESS }}"' -i cd-preview/aws/kubernetes/inputs.yaml
           yq e '.cluster_name = "${{ inputs.AWS_EKS_CLUSTER_NAME }}"' -i cd-preview/aws/kubernetes/inputs.yaml
-          yq e '.namespace = "${{ steps.getowner.outputs.repo_name }}-${{ inputs.semver }}"' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.namespace = "${{ steps.getowner.outputs.repo_name }}-${{ inputs.pr_name }}"' -i cd-preview/aws/kubernetes/inputs.yaml
           yq e '.create_namespace = true' -i cd-preview/aws/kubernetes/inputs.yaml
 
       - name: Copy Values Bundle
@@ -169,7 +169,7 @@ jobs:
         run: |
           cat > global-inputs.yaml << EOF
           environment: preview
-          release_name: preview
+          release_name: ${{ steps.getowner.outputs.repo_name }}-${{ inputs.semver }}
           default:
             region: ${{ inputs.AWS_REGION }}
             sts_role_arn: ${{ inputs.AWS_STS_ROLE_ARN }}
