@@ -45,6 +45,8 @@ on:
         value: ${{ jobs.data.outputs.awsStsRoleArn }}
       runnerSet:
         value: ${{ jobs.data.outputs.runnerSet }}
+      isLibrary:
+        value: ${{ jobs.data.outputs.isLibrary }}
 
 jobs:
   data:
@@ -66,6 +68,7 @@ jobs:
       awsRegion: ${{ steps.workspace.outputs.awsRegion }}
       awsStsRoleArn: ${{ steps.workspace.outputs.awsStsRoleArn }}
       runnerSet: ${{ steps.runner_set_env.outputs.result != '' && steps.runner_set_env.outputs.result || steps.runner_set.outputs.result }}
+      isLibrary: ${{ steps.is_library.outputs.result }}
 
     runs-on: ubuntu-latest
     steps:
@@ -349,3 +352,9 @@ jobs:
         uses: mikefarah/yq@master
         with:
           cmd: yq -I=0 '.runner_set // ""' .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml
+
+      - name: Get if the build is for library
+        id: is_library
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -I=0 '.build.isLibrary // "false"' .github/cloudopsworks-ci.yaml
