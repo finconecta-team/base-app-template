@@ -83,7 +83,7 @@ jobs:
         with:
           path: source
           fetch-depth: 1
-          token: ${{ secrets.token }}
+          token: ${{ secrets.BOT_TOKEN }}
 
       - name: Checkout Base App Template
         uses: actions/checkout@v4
