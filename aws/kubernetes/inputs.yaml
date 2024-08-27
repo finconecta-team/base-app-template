@@ -6,12 +6,14 @@ namespace: NAMESPACE
 config_map:
   enabled:  false
   files_path: values/configmaps
+  mount_point: /var/configmaps
 helm_repo_url: oci://HELM_REPO_URL|https://HELM_REPO_URL
 helm_chart_name: CHART_NAME
 helm_chart_path: CHART_PATH
 helm_values_overrides:
   'image.repository': REGISTRY/REPOSITORY
 
+#namespace_annotations: {}
 # The following are for cloud specific configurations
 # These will be used to filter the secrets from the secret manager
 # and created as secrets in the Kubernetes cluster, then inyected as environment variables

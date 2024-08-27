@@ -153,6 +153,13 @@ jobs:
         if: ${{ inputs.target_cloud_type == 'kubernetes' }}
         run: |
           cp -pf source/.github/vars/helm/values-${{ inputs.environment }}.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/helm-values.yaml
+          mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+          if [ -d source/.github/values/${{ inputs.environment }}/${{ steps.release_name.outputs.value }} ]; then
+            cp -pfR source/.github/values/${{ inputs.environment }}/${{ steps.release_name.outputs.value }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+          else
+            echo "No values found for source/.github/values/${{ inputs.environment }}/${{ steps.release_name.outputs.value }}, skipping..."
+            touch cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/.empty
+          fi
 
       - name: Generate release.yaml
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
