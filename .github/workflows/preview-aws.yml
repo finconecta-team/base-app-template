@@ -69,6 +69,8 @@ env:
   tf_summarize_version: 0.3.10
 jobs:
   preview-plan:
+    outputs:
+      preview_url: ${{ steps.getowner.outputs.repo_name }}-${{ inputs.pr_name }}.${{ steps.preview_domain.outputs.result }}
     runs-on: ${{ inputs.runner_set }}
     steps:
       - name: Install runner-tools
@@ -351,6 +353,12 @@ jobs:
           HELM_EXPERIMENTAL_OCI: "1"
           GITHUB_API_TOKEN: ${{ secrets.BOT_TOKEN }}
 
+  report-url:
+    needs:
+      - preview-plan
+      - preview-apply
+    runs-on: ubuntu-latest
+    steps:
       - name: Report Preview deployment and URL
         #if: steps.pipeline_helm.outputs.result == 1
         uses: actions/github-script@v7
@@ -358,7 +366,8 @@ jobs:
           github-token: ${{ secrets.BOT_TOKEN }}
           script: |
             const output = `#### Preview Deployment Completed
-            You can find the deployed instance [here](https://${{ steps.getowner.outputs.repo_name }}-${{ inputs.pr_name }}.${{ steps.preview_domain.outputs.result }})
+            You can find the deployed instance [here](https://${{ needs.preview-apply.outputs.preview_url }})
+            URL: https://${{ needs.preview-apply.outputs.preview_url }}
             
             *Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`*`;
 
