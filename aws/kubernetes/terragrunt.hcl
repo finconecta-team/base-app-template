@@ -73,6 +73,7 @@ inputs = {
   )
   container_registry    = local.local_vars.container_registry
   namespace_annotations = try(local.local_vars.namespace_annotations, {})
+  create_namespace      = try(local.local_vars.create_namespace, false)
   config_map            = local.local_vars.config_map
   secrets               = local.local_vars.aws
   absolute_path         = get_terragrunt_dir()
