@@ -134,6 +134,7 @@ jobs:
           cp -pf source/.github/vars/inputs-global.yaml cd-preview/aws/kubernetes/inputs-global.yaml
           yq e '.helm_values_overrides += { "image.repository": "${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ steps.getowner.outputs.owner }}/${{ steps.getowner.outputs.repo_name }}" }' -i cd-preview/aws/kubernetes/inputs.yaml
           yq e '.helm_values_overrides += { "ingress.host": "${{ steps.getowner.outputs.repo_name }}-${{ inputs.pr_name }}.${{ steps.preview_domain.outputs.result }}" }' -i cd-preview/aws/kubernetes/inputs.yaml
+          yq e '.helm_values_overrides += { "ingress.rules[0].host": "${{ steps.getowner.outputs.repo_name }}-${{ inputs.pr_name }}.${{ steps.preview_domain.outputs.result }}" }' -i cd-preview/aws/kubernetes/inputs.yaml
           yq e '.helm_values_overrides += { "ingress.annotations.cert-manager\\.io/cluster-issuer":"letsencrypt-prod" }' -i cd-preview/aws/kubernetes/inputs.yaml
           yq e '.helm_values_overrides += { "ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/ssl-redirect":"true" }' -i cd-preview/aws/kubernetes/inputs.yaml
           yq e '.helm_values_overrides += { "ingress.tls.secretName":"${{ steps.getowner.outputs.repo_name }}-${{ inputs.pr_name }}-tls"}' -i cd-preview/aws/kubernetes/inputs.yaml
