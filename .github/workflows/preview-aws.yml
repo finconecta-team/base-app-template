@@ -169,7 +169,7 @@ jobs:
         run: |
           cat > global-inputs.yaml << EOF
           environment: preview
-          release_name: preview
+          release_name: ${{ steps.getowner.outputs.repo_name }}-${{ inputs.semver }}
           default:
             region: ${{ inputs.AWS_REGION }}
             sts_role_arn: ${{ inputs.AWS_STS_ROLE_ARN }}
