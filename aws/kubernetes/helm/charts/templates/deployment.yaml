@@ -43,9 +43,12 @@ spec:
         - name: {{ $pkey }}
           value: {{ quote $pval }}
 {{- end }}
-{{- if .Values.envFrom }}
         envFrom:
+{{- if .Values.envFrom }}
 {{ toYaml .Values.envFrom | indent 10 }}
+{{- end }}
+{{- if .Values.injectEnvFrom }}
+{{ toYaml .Values.injectEnvFrom | indent 10 }}
 {{- end }}
         ports:
         - containerPort: {{ .Values.service.internalPort }}
@@ -91,6 +94,9 @@ spec:
           {{- if .Values.additionalVolumeMounts }}
 {{ toYaml .Values.additionalVolumeMounts | indent 10 }}
           {{- end }}
+          {{- if .Values.injectedVolumeMounts }}
+{{ toYaml .Values.injectedVolumeMounts | indent 10 }}
+          {{- end }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       {{- if .Values.affinity }}
       affinity:
@@ -107,4 +113,7 @@ spec:
       volumes:
         {{- if .Values.additionalVolumes }}
 {{ toYaml .Values.additionalVolumes | indent 8 }}
+        {{- end }}
+        {{- if .Values.injectedVolumes }}
+{{ toYaml .Values.injectedVolumes | indent 8 }}
         {{- end }}

@@ -101,3 +101,12 @@ ingress:
   annotations: {}
   tls:
     enabled: false
+
+
+configMap:
+  enabled: false
+  values: {}
+
+secret:
+  enabled: false
+  values: {}
