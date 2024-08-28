@@ -366,8 +366,8 @@ jobs:
           github-token: ${{ secrets.BOT_TOKEN }}
           script: |
             const output = `#### Preview Deployment Completed
-            You can find the deployed instance [here](https://${{ needs.preview-apply.outputs.preview_url }})
-            URL: https://${{ needs.preview-apply.outputs.preview_url }}
+            You can find the deployed instance [here](https://${{ needs.preview-plan.outputs.preview_url }})
+            URL: https://${{ needs.preview-plan.outputs.preview_url }}
             
             *Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`*`;
 
