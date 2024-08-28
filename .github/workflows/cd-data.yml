@@ -347,7 +347,20 @@ jobs:
         with:
           cmd: yq -I=0 '.cd.runner_set // "ubuntu-latest"' .github/cloudopsworks-ci.yaml
 
+      - name: Check specific environment file exists
+        id: check_env_file
+        run: |
+          fexist=false
+          if [ ! -f .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml ]; then
+            echo "File .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml does not exist"
+          else
+            fexist=true
+          fi
+          echo "result=$fexist" >> $GITHUB_OUTPUT
+          
+
       - name: Get the Runner Set for the environment
+        if: steps.check_env_file.outputs.result == 'true'
         id: runner_set_env
         uses: mikefarah/yq@master
         with:
