@@ -238,6 +238,7 @@ jobs:
         with:
           name: plan-file-aws-${{ inputs.target_cloud_type }}
           retention-days: 1
+          include-hidden-files: true
           path: |
             cd-${{ inputs.environment }}/**/values/**/*
             cd-${{ inputs.environment }}/**/.values_hash_*
