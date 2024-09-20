@@ -202,7 +202,7 @@ jobs:
             ${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ inputs.repository_owner }}/${{ inputs.repository_name }}:${{ steps.semver.outputs.version }}
       # Push docker version but is not latest release
       - name: Docker Push Non-Release
-        if:  ! inputs.isRelease
+        if: ${{ ! inputs.isRelease }}
         uses: docker/build-push-action@v5
         with:
           build-args: |
