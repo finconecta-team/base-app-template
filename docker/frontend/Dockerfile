@@ -4,7 +4,7 @@
 #
 ARG IMAGE_NAME=nginxinc/nginx-unprivileged:1.27-alpine
 
-FROM $IMAGE_NAME as base
+FROM $IMAGE_NAME AS base
 
 ARG NGINX_ERROR_LOG_LEVEL=warn
 ARG NGINX_ERROR_LOG_PATH="/var/log/nginx/error.log"
