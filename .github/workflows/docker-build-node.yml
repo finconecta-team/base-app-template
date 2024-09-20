@@ -19,9 +19,18 @@ on:
       docker_inline:
         required: true
         type: string
+      docker_args:
+        required: true
+        type: string
       front_end:
         required: true
         type: boolean
+      node_version:
+        required: true
+        type: string
+      custom_run_command:
+        required: false
+        type: string
       DOCKER_REGISTRY_ADDRESS:
         required: true
         type: string
@@ -131,9 +140,43 @@ jobs:
           registry: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
 
       # Copy Dockerfile from source to current dir
-      - name: Copy Dockerfile
-        if: inputs.
-        run: cp source/docker/frontend
+      - name: Copy Dockerfile Front End
+        if: inputs.front_end
+        run: |
+          cp source/docker/frontend/* .
+          cp source/docker/frontend/.dockerignore .
+
+      # Copy Dockerfile from source to current dir
+      - name: Copy Dockerfile NodeJS Server
+        if: inputs.front_end == false
+        run:
+          cp source/docker/node/* .
+          cp source/docker/node/.dockerignore .
+
+      # for non front end projects nodejs version is set by parameter, defaults to 20
+      - name: Set output with node Version
+        id: node_version
+        run: |
+          if [ "${{ inputs.node_version }}" != "" ] ; then
+            echo "result=IMAGE_NAME=node:${{ inputs.node_version }}" >> $GITHUB_OUTPUT
+          fi
+
+      # if custom_run_command is non empty then need to override the startup.sh scripts with new content, write the file in-place
+      - name: Set custom run command
+        if: inputs.custom_run_command != ""
+        run: |
+          cat > ./startup.sh << EOF
+            #!/bin/sh
+          
+            # Startup the nodejs Server (custom command)
+            cd /app/webapp
+            ${{ inputs.custom_run_command }}
+          EOF
+          
+      # make a multiline replacement in the Dockerfile from inputs.docker_inline the string to replace is #<DOCKER-INJECTION-POINT> sed should use different delinmiter than /
+      - name: Dockerfile Injection
+        run: |
+          sed -i "s%#<DOCKER-INJECTION-POINT>%${{ inputs.docker_inline }}%g" Dockerfile
 
       #
       # Build-X run
@@ -144,6 +187,9 @@ jobs:
         if:  inputs.isRelease
         uses: docker/build-push-action@v5
         with:
+          build-args: |
+            ${{ steps.node_version.outputs.result }}
+            ${{ inputs.docker_args }}
           push: true
           context: .
           tags: |
@@ -154,6 +200,9 @@ jobs:
         if:  ! inputs.isRelease
         uses: docker/build-push-action@v5
         with:
+          build-args: |
+            ${{ steps.node_version.outputs.result }}
+            ${{ inputs.docker_args }}
           push: true
           context: .
           tags: |

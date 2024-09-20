@@ -10,7 +10,6 @@ ARG NGINX_ERROR_LOG_LEVEL=warn
 ARG NGINX_ERROR_LOG_PATH="/var/log/nginx/error.log"
 ARG NGINX_ACCESS_LOG_TYPE=json
 ARG NGINX_ACCESS_LOG_PATH="/var/log/nginx/access.log"
-ARG USERNAME=
 
 ## Stage 1: Create NGINX configuration
 USER root
