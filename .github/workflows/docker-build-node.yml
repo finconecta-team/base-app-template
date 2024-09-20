@@ -1,0 +1,209 @@
+##
+# (c) 2024 - Cloud Ops Works LLC - https://cloudops.works/
+#            On GitHub: https://github.com/cloudopsworks
+#            Distributed Under Apache v2.0 License
+#
+name: Docker Build Workflow NodeJS
+on:
+  workflow_call:
+    inputs:
+      repository_name:
+        required: true
+        type: string
+      repository_owner:
+        required: true
+        type: string
+      isRelease:
+        required: true
+        type: boolean
+      docker_inline:
+        required: true
+        type: string
+      docker_args:
+        required: true
+        type: string
+      front_end:
+        required: true
+        type: boolean
+      node_version:
+        required: true
+        type: string
+      custom_run_command:
+        required: false
+        type: string
+      DOCKER_REGISTRY_ADDRESS:
+        required: true
+        type: string
+      HELM_REGISTRY_ADDRESS:
+        required: true
+        type: string
+      BOT_USER:
+        required: true
+        type: string
+      BOT_EMAIL:
+        required: true
+        type: string
+      TARGET_CLOUD:
+        required: true
+        type: string
+      AWS_REGION:
+        required: true
+        type: string
+      AWS_STS_ROLE_ARN:
+        required: false
+        type: string
+        default: ""
+    secrets:
+      token:
+        required: true
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AZURE_SERVICE_ID:
+        required: true
+      AZURE_SERVICE_SECRET:
+        required: true
+
+env:
+  base_app_version: 4
+
+jobs:
+  nodejs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          path: source
+          fetch-depth: 1
+          token: ${{ secrets.token }}
+
+      - name: Checkout Base App Template
+        uses: actions/checkout@v4
+        with:
+          repository: cloudopsworks/base-app-template
+          path: base
+          fetch-depth: 1
+          ref: v${{ env.base_app_version }}
+          token: ${{ secrets.token }}
+
+      # Download Artifacts from previous jobs
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: all_artifacts
+
+      # Download Artifacts from previous jobs
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: node_build_artifact
+          path: build
+      #
+      # Docker Build login Azure
+      - name: Docker Login Azure
+        env:
+          TARGET: ${{ inputs.TARGET_CLOUD }}
+        if: ${{ inputs.TARGET_CLOUD == 'AZURE' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
+          username: ${{ secrets.AZURE_SERVICE_ID }}
+          password: ${{ secrets.AZURE_SERVICE_SECRET }}
+      #
+      # Docker Build login AWS
+      - name: Configure AWS Credentials
+        if: ${{ inputs.TARGET_CLOUD == 'AWS' && inputs.AWS_STS_ROLE_ARN == '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.AWS_REGION }}
+
+      #
+      # Docker Build login AWS - w/Assume Role
+      - name: Configure AWS Credentials with Assume Role
+        if: ${{ inputs.TARGET_CLOUD == 'AWS' && inputs.AWS_STS_ROLE_ARN != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ inputs.AWS_STS_ROLE_ARN }}
+          role-session-name: ${{ inputs.repository_name }}-build
+          aws-region: ${{ inputs.AWS_REGION }}
+
+      - name: Docker Login AWS
+        if: ${{  inputs.TARGET_CLOUD == 'AWS' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
+
+      # Copy Dockerfile from source to current dir
+      - name: Copy Dockerfile Front End
+        if: inputs.front_end
+        run: |
+          cp source/docker/frontend/* .
+          cp source/docker/frontend/.dockerignore .
+
+      # Copy Dockerfile from source to current dir
+      - name: Copy Dockerfile NodeJS Server
+        if: inputs.front_end == false
+        run:
+          cp source/docker/node/* .
+          cp source/docker/node/.dockerignore .
+
+      # for non front end projects nodejs version is set by parameter, defaults to 20
+      - name: Set output with node Version
+        id: node_version
+        run: |
+          if [ "${{ inputs.node_version }}" != "" ] ; then
+            echo "result=IMAGE_NAME=node:${{ inputs.node_version }}" >> $GITHUB_OUTPUT
+          fi
+
+      # if custom_run_command is non empty then need to override the startup.sh scripts with new content, write the file in-place
+      - name: Set custom run command
+        if: inputs.custom_run_command != ""
+        run: |
+          cat > ./startup.sh << EOF
+            #!/bin/sh
+          
+            # Startup the nodejs Server (custom command)
+            cd /app/webapp
+            ${{ inputs.custom_run_command }}
+          EOF
+          
+      # make a multiline replacement in the Dockerfile from inputs.docker_inline the string to replace is #<DOCKER-INJECTION-POINT> sed should use different delinmiter than /
+      - name: Dockerfile Injection
+        run: |
+          sed -i "s%#<DOCKER-INJECTION-POINT>%${{ inputs.docker_inline }}%g" Dockerfile
+
+      #
+      # Build-X run
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      # Push docker version latest release
+      - name: Docker Push Release
+        if:  inputs.isRelease
+        uses: docker/build-push-action@v5
+        with:
+          build-args: |
+            ${{ steps.node_version.outputs.result }}
+            ${{ inputs.docker_args }}
+          push: true
+          context: .
+          tags: |
+            ${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ inputs.repository_owner }}/${{ inputs.repository_name }}:latest
+            ${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ inputs.repository_owner }}/${{ inputs.repository_name }}:${{ steps.semver.outputs.version }}
+      # Push docker version but is not latest release
+      - name: Docker Push Non-Release
+        if:  ! inputs.isRelease
+        uses: docker/build-push-action@v5
+        with:
+          build-args: |
+            ${{ steps.node_version.outputs.result }}
+            ${{ inputs.docker_args }}
+          push: true
+          context: .
+          tags: |
+            ${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ inputs.repository_owner }}/${{ inputs.repository_name }}:${{ steps.semver.outputs.version }}
