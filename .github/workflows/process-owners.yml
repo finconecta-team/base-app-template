@@ -88,6 +88,8 @@ jobs:
         run: |
           if [ -f .github/.iac ]; then
             echo "result=iac" >> $GITHUB_OUTPUT
+          elif [ -f .github/.docker ]; then
+            echo "result=dockeronly" >> $GITHUB_OUTPUT
           else
             echo "result=sourcecode" >> $GITHUB_OUTPUT
           fi
