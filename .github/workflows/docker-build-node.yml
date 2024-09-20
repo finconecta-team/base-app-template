@@ -159,6 +159,7 @@ jobs:
 
       # for non front end projects nodejs version is set by parameter, defaults to 20
       - name: Set output with node Version
+        if: inputs.front_end == false
         id: node_version
         run: |
           if [ "${{ inputs.node_version }}" != "" ] ; then
