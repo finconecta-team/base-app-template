@@ -164,7 +164,7 @@ jobs:
 
       # if custom_run_command is non empty then need to override the startup.sh scripts with new content, write the file in-place
       - name: Set custom run command
-        if: inputs.custom_run_command != ''
+        if: ${{ inputs.custom_run_command != '' }}
         run: |
           cat > ./startup.sh << EOF
             #!/bin/sh
