@@ -7,6 +7,9 @@ name: Docker Build Workflow NodeJS
 on:
   workflow_call:
     inputs:
+      semver:
+        required: true
+        type: string
       repository_name:
         required: true
         type: string
@@ -196,7 +199,7 @@ jobs:
           context: .
           tags: |
             ${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ inputs.repository_owner }}/${{ inputs.repository_name }}:latest
-            ${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ inputs.repository_owner }}/${{ inputs.repository_name }}:${{ steps.semver.outputs.version }}
+            ${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ inputs.repository_owner }}/${{ inputs.repository_name }}:${{ inputs.semver }}
       # Push docker version but is not latest release
       - name: Docker Push Non-Release
         if: ${{ ! inputs.isRelease }}
@@ -209,4 +212,4 @@ jobs:
           push: true
           context: .
           tags: |
-            ${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ inputs.repository_owner }}/${{ inputs.repository_name }}:${{ steps.semver.outputs.version }}
+            ${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ inputs.repository_owner }}/${{ inputs.repository_name }}:${{ inputs.semver }}
