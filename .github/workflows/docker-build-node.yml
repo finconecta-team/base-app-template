@@ -155,7 +155,7 @@ jobs:
       # Copy Dockerfile from blueprint to current dir
       - name: Copy Dockerfile NodeJS Server
         if: inputs.front_end == false
-        run:
+        run: |
           cp blueprint/docker/node/* .
           cp blueprint/docker/node/.dockerignore .
 
