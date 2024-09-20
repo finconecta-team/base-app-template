@@ -4,7 +4,7 @@
 #
 ARG IMAGE_NAME=node:18-alpine
 
-FROM $IMAGE_NAME as base
+FROM $IMAGE_NAME AS base
 
 ## Stage 1: Create NGINX configuration
 USER root
