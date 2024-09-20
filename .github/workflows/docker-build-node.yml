@@ -93,13 +93,13 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: all_artifacts
+          pattern: all_artifacts
 
       # Download Artifacts from previous jobs
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: node_build_artifact
+          pattern: node_build_artifact
           path: build
       #
       # Docker Build login Azure
