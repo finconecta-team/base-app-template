@@ -84,7 +84,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: cloudopsworks/base-app-template
-          path: base
+          path: blueprint
           fetch-depth: 1
           ref: v${{ env.base_app_version }}
           token: ${{ secrets.token }}
@@ -140,19 +140,19 @@ jobs:
         with:
           registry: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
 
-      # Copy Dockerfile from source to current dir
+      # Copy Dockerfile from blueprint to current dir
       - name: Copy Dockerfile Front End
         if: inputs.front_end
         run: |
-          cp source/docker/frontend/* .
-          cp source/docker/frontend/.dockerignore .
+          cp blueprint/docker/frontend/* .
+          cp blueprint/docker/frontend/.dockerignore .
 
-      # Copy Dockerfile from source to current dir
+      # Copy Dockerfile from blueprint to current dir
       - name: Copy Dockerfile NodeJS Server
         if: inputs.front_end == false
         run:
-          cp source/docker/node/* .
-          cp source/docker/node/.dockerignore .
+          cp blueprint/docker/node/* .
+          cp blueprint/docker/node/.dockerignore .
 
       # for non front end projects nodejs version is set by parameter, defaults to 20
       - name: Set output with node Version
