@@ -38,9 +38,6 @@ on:
       DOCKER_REGISTRY_ADDRESS:
         required: true
         type: string
-      HELM_REGISTRY_ADDRESS:
-        required: true
-        type: string
       BOT_USER:
         required: true
         type: string
