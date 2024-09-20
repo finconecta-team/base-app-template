@@ -31,6 +31,10 @@ on:
       custom_run_command:
         required: false
         type: string
+      node_build_dir:
+        required: false
+        type: string
+        default: "./build"
       DOCKER_REGISTRY_ADDRESS:
         required: true
         type: string
@@ -188,6 +192,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: |
+            BUILD_DIR=${{ inputs.node_build_dir }}
             ${{ steps.node_version.outputs.result }}
             ${{ inputs.docker_args }}
           push: true
@@ -201,6 +206,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: |
+            BUILD_DIR=${{ inputs.node_build_dir }}
             ${{ steps.node_version.outputs.result }}
             ${{ inputs.docker_args }}
           push: true

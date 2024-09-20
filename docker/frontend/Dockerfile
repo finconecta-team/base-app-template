@@ -11,6 +11,8 @@ ARG NGINX_ERROR_LOG_PATH="/var/log/nginx/error.log"
 ARG NGINX_ACCESS_LOG_TYPE=json
 ARG NGINX_ACCESS_LOG_PATH="/var/log/nginx/access.log"
 
+ARG BUILD_DIR=./build/
+
 ## Stage 1: Create NGINX configuration
 USER root
 COPY ./nginx.conf /etc/nginx/nginx.conf
@@ -23,7 +25,7 @@ RUN if [[ "${NGINX_ACCESS_LOG_TYPE}" == "off" ]] ; \
     fi
 # Override rest of nginx configuration
 COPY ./nginx-app.conf /etc/nginx/conf.d/default.conf
-COPY ./build/ /usr/share/nginx/html/
+COPY ${BUILD_DIR} /usr/share/nginx/html/
 
 # Stage 2: Customized configuation injection occurs at command line
 FROM base AS customized
