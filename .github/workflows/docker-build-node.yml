@@ -168,10 +168,29 @@ jobs:
       # for non front end projects nodejs version is set by parameter, defaults to 20
       - name: Set output with node Version
         if: inputs.front_end == false
-        id: node_version
+        id: node_version_image_name
         run: |
           if [ "${{ inputs.node_version }}" != "" ] ; then
-            echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+            case "${{ inputs.node_image_variant }}" in
+              alpine*)
+                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+                ;;
+              bookworn*)
+                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+                ;;
+              bullseye*)
+                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+                ;;
+              current*)
+                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+                ;;
+              slim)
+                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+                ;;
+              *)
+                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}" >> $GITHUB_OUTPUT
+                ;;
+            esac
           fi
 
       # if custom_run_command is non empty then need to override the startup.sh scripts with new content, write the file in-place
@@ -214,7 +233,7 @@ jobs:
         with:
           build-args: |
             BUILD_DIR=${{ inputs.node_build_dir }}
-            ${{ steps.node_version.outputs.result }}
+            ${{ steps.node_version_image_name.outputs.result }}
             ${{ inputs.docker_args }}
           push: true
           context: .
@@ -228,7 +247,7 @@ jobs:
         with:
           build-args: |
             BUILD_DIR=${{ inputs.node_build_dir }}
-            ${{ steps.node_version.outputs.result }}
+            ${{ steps.node_version_image_name.outputs.result }}
             ${{ inputs.docker_args }}
           push: true
           context: .

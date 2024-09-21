@@ -25,13 +25,7 @@ on:
       docker_args:
         required: true
         type: string
-      java_version:
-        required: true
-        type: string
-      java_dist:
-        required: true
-        type: string
-      java_image_variant:
+      docker_image_tag:
         required: true
         type: string
       custom_run_command:
@@ -137,44 +131,19 @@ jobs:
         with:
           registry: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
 
-      # Copy Dockerfile from blueprint to current dir
-      - name: Copy Dockerfile Java App
-        run: |
-          cp blueprint/docker/java/* .
-          cp blueprint/docker/java/.dockerignore .
 
-      # Java version image settings (adopt is deprecated)
-      - name: Set output with Java Version
-        id: java_version_image_name
+      # Copy Dockerfile from blueprint to current dir
+      - name: Copy Dockerfile Template Docker
         run: |
-          if [ "${{ inputs.java_version }}" != "" ] ; then
-            case "${{ inputs.java_dist }}" in
-              adopt)
-                echo "result=IMAGE_NAME=adoptopenjdk:${{ inputs.java_version }}-${{ inputs.java_image_variant }}" >> $GITHUB_OUTPUT
-                ;;
-              zulu)
-                case "${{ inputs.java_image_variant }}" in
-                  debian)
-                    echo "result=IMAGE_NAME=azul/zulu-openjdk-debian:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
-                    ;;
-                  centos)
-                    echo "result=IMAGE_NAME=azul/zulu-openjdk-centos:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
-                    ;;
-                  standard|std|slim)
-                    echo "result=IMAGE_NAME=azul/zulu-openjdk:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
-                    ;;
-                  *)
-                    echo "result=IMAGE_NAME=azul/zulu-openjdk-alpine:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
-                    ;;
-                esac
-                ;;
-              corretto)
-                echo "result=IMAGE_NAME=amazoncorretto:${{ inputs.java_version }}-${{ inputs.java_image_variant }}" >> $GITHUB_OUTPUT
-                ;;
-              *)
-                echo "result=IMAGE_NAME=eclipse-temurin:${{ inputs.java_version }}-${{ inputs.java_image_variant }}" >> $GITHUB_OUTPUT
-                ;;
-            esac
+          cp blueprint/docker/docker/* .
+          cp blueprint/docker/docker/.dockerignore .
+
+      # for non front end projects nodejs version is set by parameter, defaults to 20
+      - name: Set output with node Version
+        id: docker_image_name
+        run: |
+          if [ "${{ inputs.docker_image_tag }}" != "" ] ; then
+            echo "result=IMAGE_NAME=${{ inputs.docker_image_tag }}" >> $GITHUB_OUTPUT
           fi
 
       # if custom_run_command is non empty then need to override the startup.sh scripts with new content, write the file in-place
@@ -216,7 +185,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: |
-            ${{ steps.java_version_image_name.outputs.result }}
+            ${{ steps.docker_image_name.outputs.result }}
             ${{ inputs.docker_args }}
           push: true
           context: .
@@ -229,7 +198,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: |
-            ${{ steps.java_version_image_name.outputs.result }}
+            ${{ steps.docker_image_name.outputs.result }}
             ${{ inputs.docker_args }}
           push: true
           context: .

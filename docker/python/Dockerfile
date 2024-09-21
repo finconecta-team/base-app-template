@@ -2,9 +2,8 @@
 #            On GitHub: https://github.com/cloudopsworks
 #            Distributed Under Apache v2.0 License
 #
-ARG IMAGE_NAME=eclipse-temurin:21-alpine
-ARG CLASSPATH=""
-ARG JAVA_OPTS=""
+ARG IMAGE_NAME=python:3.12-slim
+ARG PYTHON_OPTS=""
 ARG APM_OPTS=""
 
 FROM $IMAGE_NAME AS base
@@ -14,7 +13,7 @@ USER root
 
 # Copy the application configuarion as per the application
 # Build process must ensure output jar is unique for each build
-COPY target/*.jar /app/webapp/app.jar
+COPY . /app/webapp/
 
 # Stage 2: Customized configuation injection occurs at command line
 FROM base AS customized
@@ -30,8 +29,7 @@ RUN addgroup --gid 2001 --system webapp \
 
 COPY ./startup.sh /app/webapp/
 RUN chmod +x /app/webapp/startup.sh
-ENV CLASSPATH=${CLASSPATH}
-ENV JAVA_OPTS=${JAVA_OPTS}
+ENV PYTHON_OPTS=${PYTHON_OPTS}
 ENV APM_OPTS=${APM_OPTS}
 
 USER webapp
