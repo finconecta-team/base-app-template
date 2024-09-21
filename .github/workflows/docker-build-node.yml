@@ -31,6 +31,12 @@ on:
       node_version:
         required: true
         type: string
+      node_dist:
+        required: true
+        type: string
+      node_image_variant:
+        required: true
+        type: string
       custom_run_command:
         required: false
         type: string
@@ -165,7 +171,7 @@ jobs:
         id: node_version
         run: |
           if [ "${{ inputs.node_version }}" != "" ] ; then
-            echo "result=IMAGE_NAME=node:${{ inputs.node_version }}" >> $GITHUB_OUTPUT
+            echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
           fi
 
       # if custom_run_command is non empty then need to override the startup.sh scripts with new content, write the file in-place
