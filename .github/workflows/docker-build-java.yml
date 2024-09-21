@@ -168,6 +168,7 @@ jobs:
                     echo "result=IMAGE_NAME=azul/zulu-openjdk:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
                     ;;
                 esac
+                ;;
               corretto)
                 echo "result=IMAGE_NAME=amazoncorretto:${{ inputs.java_version }}-${{ inputs.java_image_variant }}" >> $GITHUB_OUTPUT
                 ;;
