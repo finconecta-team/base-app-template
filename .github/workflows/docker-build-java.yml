@@ -149,7 +149,7 @@ jobs:
         id: node_version
         run: |
           if [ "${{ inputs.java_version }}" != "" ] ; then
-            case "${{ inputs.java_dist }} in:
+            case "${{ inputs.java_dist }}" in:
               adopt)
                 echo "result=IMAGE_NAME=adoptopenjdk:${{ inputs.java_version }}-${{ inputs.java_image_variant }}" >> $GITHUB_OUTPUT
                 ;;
