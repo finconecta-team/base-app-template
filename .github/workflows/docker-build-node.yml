@@ -189,7 +189,18 @@ jobs:
       # make a multiline replacement in the Dockerfile from inputs.docker_inline the string to replace is #<DOCKER-INJECTION-POINT> sed should use different delinmiter than /
       - name: Dockerfile Injection
         run: |
-          sed -i "s%#<DOCKER-INJECTION-POINT>%${{ inputs.docker_inline }}%g" Dockerfile
+          TEMP_FILE=$(mktemp)
+          INJECTION_POINT="#<DOCKER-INJECTION-POINT>"
+          while IFS= read -r line; do
+            if [[ "$line" =~ $INJECTION_POINT ]]; then
+              # Insert the content of input at the injection point
+              echo "${{ inputs.docker_inline }}"
+            else
+              # Print the current line
+              echo "$line"
+            fi
+          done < "$DOCKERFILE" > "$TEMP_FILE"
+          mv "$TEMP_FILE" "$DOCKERFILE"
 
       #
       # Build-X run
