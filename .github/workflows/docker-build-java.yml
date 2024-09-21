@@ -155,17 +155,17 @@ jobs:
                 ;;
               zulu)
                 case "${{ inputs.java_image_variant }}" in
-                  alpine)
-                    echo "result=IMAGE_NAME=azul/zulu-openjdk-alpine:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
-                    ;;
                   debian)
                     echo "result=IMAGE_NAME=azul/zulu-openjdk-debian:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
                     ;;
                   centos)
                     echo "result=IMAGE_NAME=azul/zulu-openjdk-centos:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
                     ;;
-                  *)
+                  standard|std|slim)
                     echo "result=IMAGE_NAME=azul/zulu-openjdk:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
+                    ;;
+                  *)
+                    echo "result=IMAGE_NAME=azul/zulu-openjdk-alpine:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
                     ;;
                 esac
                 ;;
