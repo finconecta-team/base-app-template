@@ -171,7 +171,26 @@ jobs:
         id: node_version
         run: |
           if [ "${{ inputs.node_version }}" != "" ] ; then
-            echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+            case "${{ inputs.node_image_variant }}" in
+              alpine*)
+                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+                ;;
+              bookworn*)
+                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+                ;;
+              bullseye*)
+                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+                ;;
+              current*)
+                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+                ;;
+              slim)
+                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+                ;;
+              *)
+                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}" >> $GITHUB_OUTPUT
+                ;;
+            esac
           fi
 
       # if custom_run_command is non empty then need to override the startup.sh scripts with new content, write the file in-place
