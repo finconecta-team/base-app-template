@@ -25,25 +25,18 @@ on:
       docker_args:
         required: true
         type: string
-      front_end:
-        required: true
-        type: boolean
-      node_version:
+      java_version:
         required: true
         type: string
-      node_dist:
+      java_dist:
         required: true
         type: string
-      node_image_variant:
+      java_image_variant:
         required: true
         type: string
       custom_run_command:
         required: false
         type: string
-      node_build_dir:
-        required: false
-        type: string
-        default: "./build"
       DOCKER_REGISTRY_ADDRESS:
         required: true
         type: string
@@ -105,13 +98,6 @@ jobs:
           merge-multiple: true
           pattern: all_artifacts
 
-      # Download Artifacts from previous jobs
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          merge-multiple: true
-          pattern: node_build_artifact
-          path: build
       #
       # Docker Build login Azure
       - name: Docker Login Azure
@@ -152,26 +138,44 @@ jobs:
           registry: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
 
       # Copy Dockerfile from blueprint to current dir
-      - name: Copy Dockerfile Front End
-        if: inputs.front_end
-        run: |
-          cp blueprint/docker/frontend/* .
-          cp blueprint/docker/frontend/.dockerignore .
-
-      # Copy Dockerfile from blueprint to current dir
-      - name: Copy Dockerfile NodeJS Server
+      - name: Copy Dockerfile Java App
         if: inputs.front_end == false
         run: |
-          cp blueprint/docker/node/* .
-          cp blueprint/docker/node/.dockerignore .
+          cp blueprint/docker/java/* .
+          cp blueprint/docker/java/.dockerignore .
 
-      # for non front end projects nodejs version is set by parameter, defaults to 20
-      - name: Set output with node Version
-        if: inputs.front_end == false
+      # Java version image settings (adopt is deprecated)
+      - name: Set output with Java Version
         id: node_version
         run: |
-          if [ "${{ inputs.node_version }}" != "" ] ; then
-            echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+          if [ "${{ inputs.java_version }}" != "" ] ; then
+            case "${{ inputs.java_dist }}" in
+              adopt)
+                echo "result=IMAGE_NAME=adoptopenjdk:${{ inputs.java_version }}-${{ inputs.java_image_variant }}" >> $GITHUB_OUTPUT
+                ;;
+              zulu)
+                case "${{ inputs.java_image_variant }}" in
+                  alpine)
+                    echo "result=IMAGE_NAME=azul/zulu-openjdk-alpine:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
+                    ;;
+                  debian)
+                    echo "result=IMAGE_NAME=azul/zulu-openjdk-debian:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
+                    ;;
+                  centos)
+                    echo "result=IMAGE_NAME=azul/zulu-openjdk-centos:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
+                    ;;
+                  *)
+                    echo "result=IMAGE_NAME=azul/zulu-openjdk:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
+                    ;;
+                esac
+                ;;
+              corretto)
+                echo "result=IMAGE_NAME=amazoncorretto:${{ inputs.java_version }}-${{ inputs.java_image_variant }}" >> $GITHUB_OUTPUT
+                ;;
+              *)
+                echo "result=IMAGE_NAME=eclipse-temurin:${{ inputs.java_version }}-${{ inputs.java_image_variant }}" >> $GITHUB_OUTPUT
+                ;;
+            esac
           fi
 
       # if custom_run_command is non empty then need to override the startup.sh scripts with new content, write the file in-place
@@ -213,7 +217,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: |
-            BUILD_DIR=${{ inputs.node_build_dir }}
             ${{ steps.node_version.outputs.result }}
             ${{ inputs.docker_args }}
           push: true
@@ -227,7 +230,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: |
-            BUILD_DIR=${{ inputs.node_build_dir }}
             ${{ steps.node_version.outputs.result }}
             ${{ inputs.docker_args }}
           push: true
