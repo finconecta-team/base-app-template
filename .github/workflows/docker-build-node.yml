@@ -168,7 +168,7 @@ jobs:
       # for non front end projects nodejs version is set by parameter, defaults to 20
       - name: Set output with node Version
         if: inputs.front_end == false
-        id: node_version
+        id: node_version_image_name
         run: |
           if [ "${{ inputs.node_version }}" != "" ] ; then
             case "${{ inputs.node_image_variant }}" in
@@ -233,7 +233,7 @@ jobs:
         with:
           build-args: |
             BUILD_DIR=${{ inputs.node_build_dir }}
-            ${{ steps.node_version.outputs.result }}
+            ${{ steps.node_version_image_name.outputs.result }}
             ${{ inputs.docker_args }}
           push: true
           context: .
@@ -247,7 +247,7 @@ jobs:
         with:
           build-args: |
             BUILD_DIR=${{ inputs.node_build_dir }}
-            ${{ steps.node_version.outputs.result }}
+            ${{ steps.node_version_image_name.outputs.result }}
             ${{ inputs.docker_args }}
           push: true
           context: .

@@ -25,13 +25,13 @@ on:
       docker_args:
         required: true
         type: string
-      java_version:
+      python_version:
         required: true
         type: string
-      java_dist:
+      python_dist:
         required: true
         type: string
-      java_image_variant:
+      python_image_variant:
         required: true
         type: string
       custom_run_command:
@@ -138,41 +138,31 @@ jobs:
           registry: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
 
       # Copy Dockerfile from blueprint to current dir
-      - name: Copy Dockerfile Java App
+      - name: Copy Dockerfile Front End
         run: |
-          cp blueprint/docker/java/* .
-          cp blueprint/docker/java/.dockerignore .
+          cp blueprint/docker/python/* .
+          cp blueprint/docker/python/.dockerignore .
 
-      # Java version image settings (adopt is deprecated)
-      - name: Set output with Java Version
-        id: java_version_image_name
+      # for Python version is set by parameter, defaults to 3.12
+      - name: Set output with node Version
+        id: python_version_image_name
         run: |
-          if [ "${{ inputs.java_version }}" != "" ] ; then
-            case "${{ inputs.java_dist }}" in
-              adopt)
-                echo "result=IMAGE_NAME=adoptopenjdk:${{ inputs.java_version }}-${{ inputs.java_image_variant }}" >> $GITHUB_OUTPUT
+          if [ "${{ inputs.python_version }}" != "" ] ; then
+            case "${{ inputs.python_image_variant }}" in
+              alpine*)
+                echo "result=IMAGE_NAME=python:${{ inputs.python_version }}-${{ inputs.python_image_variant }}" >> $GITHUB_OUTPUT
                 ;;
-              zulu)
-                case "${{ inputs.java_image_variant }}" in
-                  debian)
-                    echo "result=IMAGE_NAME=azul/zulu-openjdk-debian:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
-                    ;;
-                  centos)
-                    echo "result=IMAGE_NAME=azul/zulu-openjdk-centos:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
-                    ;;
-                  standard|std|slim)
-                    echo "result=IMAGE_NAME=azul/zulu-openjdk:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
-                    ;;
-                  *)
-                    echo "result=IMAGE_NAME=azul/zulu-openjdk-alpine:${{ inputs.java_version }}" >> $GITHUB_OUTPUT
-                    ;;
-                esac
+              bookworn*)
+                echo "result=IMAGE_NAME=python:${{ inputs.python_version }}-${{ inputs.python_image_variant }}" >> $GITHUB_OUTPUT
                 ;;
-              corretto)
-                echo "result=IMAGE_NAME=amazoncorretto:${{ inputs.java_version }}-${{ inputs.java_image_variant }}" >> $GITHUB_OUTPUT
+              bullseye*)
+                echo "result=IMAGE_NAME=python:${{ inputs.python_version }}-${{ inputs.python_image_variant }}" >> $GITHUB_OUTPUT
+                ;;
+              slim*)
+                echo "result=IMAGE_NAME=python:${{ inputs.python_version }}-${{ inputs.python_image_variant }}" >> $GITHUB_OUTPUT
                 ;;
               *)
-                echo "result=IMAGE_NAME=eclipse-temurin:${{ inputs.java_version }}-${{ inputs.java_image_variant }}" >> $GITHUB_OUTPUT
+                echo "result=IMAGE_NAME=python:${{ inputs.python_version }}" >> $GITHUB_OUTPUT
                 ;;
             esac
           fi
@@ -216,7 +206,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: |
-            ${{ steps.java_version_image_name.outputs.result }}
+            ${{ steps.python_version_image_name.outputs.result }}
             ${{ inputs.docker_args }}
           push: true
           context: .
@@ -229,7 +219,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: |
-            ${{ steps.java_version_image_name.outputs.result }}
+            ${{ steps.python_version_image_name.outputs.result }}
             ${{ inputs.docker_args }}
           push: true
           context: .
