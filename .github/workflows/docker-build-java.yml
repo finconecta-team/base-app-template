@@ -176,7 +176,6 @@ jobs:
                 echo "result=IMAGE_NAME=eclipse-temurin:${{ inputs.java_version }}-${{ inputs.java_image_variant }}" >> $GITHUB_OUTPUT
                 ;;
             esac
-            echo "result=IMAGE_NAME=node:${{ inputs.node_version }}" >> $GITHUB_OUTPUT
           fi
 
       # if custom_run_command is non empty then need to override the startup.sh scripts with new content, write the file in-place
