@@ -10,6 +10,10 @@ ARG NGINX_ERROR_LOG_LEVEL=warn
 ARG NGINX_ERROR_LOG_PATH="/var/log/nginx/error.log"
 ARG NGINX_ACCESS_LOG_TYPE=json
 ARG NGINX_ACCESS_LOG_PATH="/var/log/nginx/access.log"
+ARG USER_ID=2000
+ARG GROUP_ID=2001
+ARG USER_NAME=webapp
+ARG GROUP_NAME=webapp
 
 ARG BUILD_DIR=./build/
 
@@ -25,7 +29,7 @@ RUN if [[ "${NGINX_ACCESS_LOG_TYPE}" == "off" ]] ; \
     fi
 # Override rest of nginx configuration
 COPY ./nginx-app.conf /etc/nginx/conf.d/default.conf
-COPY ${BUILD_DIR} /usr/share/nginx/html/
+COPY $BUILD_DIR /usr/share/nginx/html/
 
 # Stage 2: Customized configuation injection occurs at command line
 FROM base AS customized
@@ -35,15 +39,15 @@ WORKDIR /app
 # Stage 3: Final image
 FROM customized AS final
 
-RUN addgroup --gid 2001 --system webapp \
- && adduser  --uid 2000 --system --ingroup webapp --home /app/webapp webapp \
- && chown -R webapp:webapp /usr/share/nginx/html \
- && chown -R webapp:webapp /app/webapp/
+RUN addgroup --gid $GROUP_ID --system $GROUP_NAME \
+ && adduser  --uid $USER_ID --system --ingroup $GROUP_NAME --home /app/webapp $USER_NAME \
+ && chown -R $USER_NAME:$GROUP_NAME /usr/share/nginx/html \
+ && chown -R $USER_NAME:$GROUP_NAME /app/webapp/
 
 COPY ./startup.sh /app/webapp/
 RUN chmod +x /app/webapp/startup.sh
 
-USER webapp
+USER $USER_NAME
 
 EXPOSE 8080
 ENTRYPOINT ["/app/webapp/startup.sh"]

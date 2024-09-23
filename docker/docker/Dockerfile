@@ -3,6 +3,8 @@
 #            Distributed Under Apache v2.0 License
 #
 ARG IMAGE_NAME=node:18-alpine
+ARG USER_ID=0
+ARG GROUP_ID=0
 
 FROM $IMAGE_NAME AS base
 
@@ -20,14 +22,12 @@ WORKDIR /app
 # Stage 3: Final image
 FROM customized AS final
 
-RUN addgroup --gid 2001 --system webapp \
- && adduser  --uid 2000 --system --ingroup webapp --home /app/webapp webapp \
- && chown -R webapp:webapp /app/webapp/
+RUN chown -R $USER_ID:$GROUP_ID /app/webapp/
 
 COPY ./startup.sh /app/webapp/
 RUN chmod +x /app/webapp/startup.sh
 
-USER webapp
+USER $USER_ID
 
 EXPOSE 8080
 ENTRYPOINT ["/app/webapp/startup.sh"]
