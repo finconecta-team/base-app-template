@@ -370,4 +370,4 @@ jobs:
         id: is_library
         uses: mikefarah/yq@master
         with:
-          cmd: yq -I=0 '.build.isLibrary // "false"' .github/cloudopsworks-ci.yaml
+          cmd: yq -I=0 '.isLibrary // "false"' .github/vars/inputs-global.yaml
