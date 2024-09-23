@@ -6,6 +6,11 @@ ARG IMAGE_NAME=node:18-alpine
 
 FROM $IMAGE_NAME AS base
 
+ARG USER_ID=2000
+ARG GROUP_ID=2001
+ARG USER_NAME=webapp
+ARG GROUP_NAME=webapp
+
 ## Stage 1: Create NGINX configuration
 USER root
 
@@ -20,14 +25,14 @@ WORKDIR /app
 # Stage 3: Final image
 FROM customized AS final
 
-RUN addgroup --gid 2001 --system webapp \
- && adduser  --uid 2000 --system --ingroup webapp --home /app/webapp webapp \
- && chown -R webapp:webapp /app/webapp/
+RUN addgroup --gid $GROUP_ID --system $GROUP_NAME \
+ && adduser  --uid $USER_ID --system --ingroup $GROUP_NAME --home /app/webapp $USER_NAME \
+ && chown -R $USER_NAME:$GROUP_NAME /app/webapp/
 
 COPY ./startup.sh /app/webapp/
 RUN chmod +x /app/webapp/startup.sh
 
-USER webapp
+USER $USER_NAME
 
 EXPOSE 8080
 ENTRYPOINT ["/app/webapp/startup.sh"]
