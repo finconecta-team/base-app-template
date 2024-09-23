@@ -22,12 +22,12 @@ WORKDIR /app
 # Stage 3: Final image
 FROM customized AS final
 
-RUN chown -R ${USER_ID}:${GROUP_ID} /app/webapp/
+RUN chown -R $USER_ID:$GROUP_ID /app/webapp/
 
 COPY ./startup.sh /app/webapp/
 RUN chmod +x /app/webapp/startup.sh
 
-USER ${USER_ID}
+USER $USER_ID
 
 EXPOSE 8080
 ENTRYPOINT ["/app/webapp/startup.sh"]
