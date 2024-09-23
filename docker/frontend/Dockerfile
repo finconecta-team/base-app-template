@@ -35,13 +35,15 @@ WORKDIR /app
 # Stage 3: Final image
 FROM customized AS final
 
-RUN addgroup --gid 10001 --system webapp \
- && adduser  --uid 10000 --system --ingroup webapp --home /app/webapp webapp \
+RUN addgroup --gid 2001 --system webapp \
+ && adduser  --uid 2000 --system --ingroup webapp --home /app/webapp webapp \
  && chown -R webapp:webapp /usr/share/nginx/html \
  && chown -R webapp:webapp /app/webapp/
 
 COPY ./startup.sh /app/webapp/
 RUN chmod +x /app/webapp/startup.sh
+
+USER webapp
 
 EXPOSE 8080
 ENTRYPOINT ["/app/webapp/startup.sh"]
