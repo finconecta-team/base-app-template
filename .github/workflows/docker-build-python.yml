@@ -133,13 +133,14 @@ jobs:
         if: ${{ inputs.custom_run_command != '' }}
         run: |
           cat > ./startup.sh << EOF
-            #!/bin/sh
-          
-            # Startup the nodejs Server (custom command)
-            cd /app/webapp
-            ${{ inputs.custom_run_command }}
+          #!/bin/sh
+        
+          # Startup the nodejs Server (custom command)
+          cd /app/webapp
+          ${{ inputs.custom_run_command }}
           EOF
-          
+          cat ./startup.sh
+
       # make a multiline replacement in the Dockerfile from inputs.docker_inline the string to replace is #<DOCKER-INJECTION-POINT> sed should use different delinmiter than /
       - name: Dockerfile Injection
         run: |
@@ -156,6 +157,7 @@ jobs:
             fi
           done < "$DOCKERFILE" > "$TEMP_FILE"
           mv "$TEMP_FILE" "$DOCKERFILE"
+          cat "$DOCKERFILE"
 
       #
       # Build-X run
