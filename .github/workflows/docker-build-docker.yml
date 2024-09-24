@@ -147,9 +147,9 @@ jobs:
           VER_MAJOR=$(echo $VER_NUM | cut -f1 -d.)
           VER_MINOR=$(echo $VER_NUM | cut -f2 -d.)
           VER_PATCH=$(echo $VER_NUM | cut -f3 -d.)
-          echo "major=${VER_MAJOR}" >> $GITHUB_ENV
-          echo "minor=${VER_MINOR}" >> $GITHUB_ENV
-          echo "patch=${VER_PATCH}" >> $GITHUB_ENV
+          echo "major=${VER_MAJOR}" >> $GITHUB_OUTPUT
+          echo "minor=${VER_MINOR}" >> $GITHUB_OUTPUT
+          echo "patch=${VER_PATCH}" >> $GITHUB_OUTPUT
 
       # Build docker version latest release
       - name: Docker Build Release
