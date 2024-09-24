@@ -3,7 +3,7 @@
 #            On GitHub: https://github.com/cloudopsworks
 #            Distributed Under Apache v2.0 License
 #
-name: Docker Build Workflow NodeJS
+name: Docker Build Workflow - Java Image
 on:
   workflow_call:
     inputs:
@@ -98,45 +98,6 @@ jobs:
           merge-multiple: true
           pattern: all_artifacts
 
-      #
-      # Docker Build login Azure
-      - name: Docker Login Azure
-        env:
-          TARGET: ${{ inputs.TARGET_CLOUD }}
-        if: ${{ inputs.TARGET_CLOUD == 'AZURE' }}
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
-          username: ${{ secrets.AZURE_SERVICE_ID }}
-          password: ${{ secrets.AZURE_SERVICE_SECRET }}
-      #
-      # Docker Build login AWS
-      - name: Configure AWS Credentials
-        if: ${{ inputs.TARGET_CLOUD == 'AWS' && inputs.AWS_STS_ROLE_ARN == '' }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ inputs.AWS_REGION }}
-
-      #
-      # Docker Build login AWS - w/Assume Role
-      - name: Configure AWS Credentials with Assume Role
-        if: ${{ inputs.TARGET_CLOUD == 'AWS' && inputs.AWS_STS_ROLE_ARN != '' }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          role-to-assume: ${{ inputs.AWS_STS_ROLE_ARN }}
-          role-session-name: ${{ inputs.repository_name }}-build
-          aws-region: ${{ inputs.AWS_REGION }}
-
-      - name: Docker Login AWS
-        if: ${{  inputs.TARGET_CLOUD == 'AWS' }}
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
-
       # Copy Dockerfile from blueprint to current dir
       - name: Copy Dockerfile Java App
         run: |
@@ -210,28 +171,107 @@ jobs:
       # Build-X run
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      # Push docker version latest release
-      - name: Docker Push Release
+
+      - name: SemVer split
+        id: semvers
+        run: |
+          VER_NUM="${{ inputs.semver }}"
+          VER_MAJOR=$(echo $VER_NUM | cut -f1 -d.)
+          VER_MINOR=$(echo $VER_NUM | cut -f2 -d.)
+          VER_PATCH=$(echo $VER_NUM | cut -f3 -d.)
+          echo "major=${VER_MAJOR}" >> $GITHUB_OUTPUT
+          echo "minor=${VER_MINOR}" >> $GITHUB_OUTPUT
+          echo "patch=${VER_PATCH}" >> $GITHUB_OUTPUT
+
+      # Build docker version latest release
+      - name: Docker Build Release
         if:  inputs.isRelease
         uses: docker/build-push-action@v5
         with:
           build-args: |
             ${{ steps.java_version_image_name.outputs.result }}
             ${{ inputs.docker_args }}
-          push: true
+          push: false
           context: .
           tags: |
             ${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ inputs.repository_owner }}/${{ inputs.repository_name }}:latest
             ${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ inputs.repository_owner }}/${{ inputs.repository_name }}:${{ inputs.semver }}
-      # Push docker version but is not latest release
-      - name: Docker Push Non-Release
+            ${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ inputs.repository_owner }}/${{ inputs.repository_name }}:${{ steps.semvers.outputs.major }}
+            ${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ inputs.repository_owner }}/${{ inputs.repository_name }}:${{ steps.semvers.outputs.major }}.${{ steps.semvers.outputs.minor }}
+          outputs: type=docker,dest=docker-image.tar
+
+      # Build docker version but is not latest release
+      - name: Docker Build Non-Release
         if: ${{ ! inputs.isRelease }}
         uses: docker/build-push-action@v5
         with:
           build-args: |
             ${{ steps.java_version_image_name.outputs.result }}
             ${{ inputs.docker_args }}
-          push: true
+          push: false
           context: .
           tags: |
             ${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ inputs.repository_owner }}/${{ inputs.repository_name }}:${{ inputs.semver }}
+          outputs: type=docker,dest=docker-image.tar
+
+      # Upload the docker image to the artifact store
+      - name: Upload Docker Image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: docker-image.tar
+
+  docker-image-push:
+    runs-on: ubuntu-latest
+    needs:
+      - docker-image-build
+    steps:
+      - name: Download Docker Image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      #
+      # Docker Build login Azure
+      - name: Docker Login Azure
+        env:
+          TARGET: ${{ inputs.TARGET_CLOUD }}
+        if: ${{ inputs.TARGET_CLOUD == 'AZURE' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
+          username: ${{ secrets.AZURE_SERVICE_ID }}
+          password: ${{ secrets.AZURE_SERVICE_SECRET }}
+      #
+      # Docker Build login AWS
+      - name: Configure AWS Credentials
+        if: ${{ inputs.TARGET_CLOUD == 'AWS' && inputs.AWS_STS_ROLE_ARN == '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.AWS_REGION }}
+
+      #
+      # Docker Build login AWS - w/Assume Role
+      - name: Configure AWS Credentials with Assume Role
+        if: ${{ inputs.TARGET_CLOUD == 'AWS' && inputs.AWS_STS_ROLE_ARN != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ inputs.AWS_STS_ROLE_ARN }}
+          role-session-name: ${{ inputs.repository_name }}-build
+          aws-region: ${{ inputs.AWS_REGION }}
+
+      - name: Docker Login AWS
+        if: ${{  inputs.TARGET_CLOUD == 'AWS' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
+
+      - name: Push Docker image from tar
+        run: |
+          docker image load --input docker-image.tar
+          docker image push --all-tags ${{ inputs.DOCKER_REGISTRY_ADDRESS }}/${{ inputs.repository_owner }}/${{ inputs.repository_name }}
+          
