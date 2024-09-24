@@ -220,6 +220,9 @@ jobs:
         with:
           name: docker-image
           path: docker-image.tar
+          retention-days: 1
+          compression-level: '1'
+          overwrite: true
 
   docker-image-push:
     runs-on: ubuntu-latest
