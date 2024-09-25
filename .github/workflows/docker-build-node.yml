@@ -105,6 +105,16 @@ jobs:
           merge-multiple: true
           pattern: all_artifacts
 
+      - name: Uncompress Artifacts
+        if: ${{ ! inputs.front_end }}
+        run: |
+          if [ -f node_artifacts.tar ]; then
+            tar -xf node_artifacts.tar
+            rm node_artifacts.tar
+          else
+            echo "WARNING! No artifacts found."
+          fi
+
       # Copy Dockerfile from blueprint to current dir
       - name: Copy Dockerfile Front End
         if: inputs.front_end
