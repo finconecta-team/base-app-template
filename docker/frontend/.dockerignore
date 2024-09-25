@@ -20,3 +20,6 @@ sonar-project.properties
 tronador/
 .tronador
 /Makefile
+# Generated Dockerfile and Image
+Dockerfile
+docker-image.tar*
