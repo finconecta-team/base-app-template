@@ -115,6 +115,14 @@ jobs:
             echo "WARNING! No artifacts found."
           fi
 
+      # Download Artifacts from previous jobs
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          pattern: node_build_artifact
+          path: build
+
       # Copy Dockerfile from blueprint to current dir
       - name: Copy Dockerfile Front End
         if: inputs.front_end
