@@ -187,8 +187,8 @@ jobs:
                     targetName = deployments.prerelease.targets[metasuffix.groups.data].targetName;
                   }
                   deploymentName = `prerelease/${buildmeta}/${environment}`;
-                  if ( 'legacyDeliveryPush' in deployments.prelease.targets[metasuffix.groups.data] ) {
-                    deliveryPush = deployments.prelease.targets[metasuffix.groups.data].legacyDeliveryPush;
+                  if ( 'legacyDeliveryPush' in deployments.prerelease.targets[metasuffix.groups.data] ) {
+                    deliveryPush = deployments.prerelease.targets[metasuffix.groups.data].legacyDeliveryPush;
                   }
                 } else if ( pre != null ) {
                   isEnabled = (deployments.prerelease['enabled'] == null ? true : (deployments.prerelease['enabled'] === 'true'));
@@ -199,8 +199,8 @@ jobs:
                     targetName = deployments.prerelease.targetName;
                   }
                   deploymentName = `prerelease/${environment}`;
-                  if ( 'legacyDeliveryPush' in deployments.prelease ) {
-                    deliveryPush = deployments.prelease.legacyDeliveryPush;
+                  if ( 'legacyDeliveryPush' in deployments.prerelease ) {
+                    deliveryPush = deployments.prerelease.legacyDeliveryPush;
                   }
                 } else if ( buildmeta != null ) {
                   const metasuffix = buildmeta.match(/deploy-(?<data>.*)/);
