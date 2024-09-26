@@ -289,7 +289,7 @@ jobs:
         if: steps.cloud.outputs.result == 'AWS'
         uses: mikefarah/yq@master
         with:
-          cmd: yq -I=0 '.aws_region // "${{ vars[''] }}"' .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml
+          cmd: yq -I=0 '.aws.region // ""' .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml
 
       # Determine the values for Helm (deprecated)
       - name: Set the appropriate values for helm
