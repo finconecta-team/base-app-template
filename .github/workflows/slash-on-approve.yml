@@ -32,11 +32,11 @@ jobs:
 
             if ( ! thepull.mergeable ) {
               console.log('NOT Mergeable');
-              return;
+              return 0;
             } 
 
             const output = `Approval Requested for Pull request.
-            Pull request mergeable?: \`thepull.mergeable\`
+            Pull request mergeable?: \`${thepull.mergeable}\`
             Approved by: \`${author}\`
             
             *Action: \`${{ github.event_name }}\`, Working Directory: \`${{ env.tf_actions_working_dir }}\`, Workflow: \`${{ github.workflow }}\`*`;
@@ -56,14 +56,14 @@ jobs:
             var is_approved = false;
 
             for (const aReview of reviews ) {
-              if( aReview.user.login == author && aReview.state == 'APPROVED' ) {
+              if( aReview.user.login === author && aReview.state === 'APPROVED' ) {
                 is_approved = true;
                 break;
               }
             }
             
             for (const aUser of reviewers.users ) {
-              if( aUser.login == author ) {
+              if( aUser.login === author ) {
                 is_approved = true;
                 break;
               }
@@ -76,31 +76,7 @@ jobs:
                 repo: context.repo.repo,
                 body: output
               });
-
-              var reviewer_names = [];
-              for (const aUser of reviewers.users ) {
-                reviewer_names.push(aUser.login);
-              }
               
-              # Do not remove reviewers
-              //github.rest.pulls.removeRequestedReviewers({
-              //  pull_number: pull_request_number,
-              //  owner: context.repo.owner,
-              //  repo: context.repo.repo,
-              //  reviewers: reviewer_names
-              //});
-              github.rest.issues.removeLabel({
-                issue_number: pull_request_number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                name: 'approval-required',
-              });
-              github.rest.issues.removeLabel({
-                issue_number: pull_request_number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                name: 'review-required'
-              });
               github.rest.issues.addLabels({
                 issue_number: pull_request_number,
                 owner: context.repo.owner,
