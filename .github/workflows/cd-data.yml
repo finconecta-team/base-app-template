@@ -283,8 +283,8 @@ jobs:
         with:
           cmd: yq -I=0 '.container_registry // ""' .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml
 
-      # Recover the docker_registry value from the environment file
-      - name: Get Docker Registry value if set into the ENV file
+      # Recover the AWS Region value from the environment file
+      - name: Get AWS Region from input-(env).yaml file
         id: aws_region_value
         if: steps.cloud.outputs.result == 'AWS'
         uses: mikefarah/yq@master
