@@ -29,5 +29,3 @@ RUN chmod +x /app/webapp/startup.sh
 
 USER $USER_ID
 
-EXPOSE 8080
-ENTRYPOINT ["/app/webapp/startup.sh"]

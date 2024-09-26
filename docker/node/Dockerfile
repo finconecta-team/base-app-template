@@ -26,8 +26,9 @@ WORKDIR /app
 FROM customized AS final
 
 RUN addgroup --gid $GROUP_ID --system $GROUP_NAME \
- && adduser  --uid $USER_ID --system --ingroup $GROUP_NAME --home /app/webapp $USER_NAME \
- && chown -R $USER_NAME:$GROUP_NAME /app/webapp/
+ && adduser  --uid $USER_ID --system --ingroup $GROUP_NAME --home /app/webapp $USER_NAME
+# Run chown regardess of the previous step
+RUN chown -R $USER_NAME:$GROUP_NAME /app/webapp/
 
 COPY ./startup.sh /app/webapp/
 RUN chmod +x /app/webapp/startup.sh

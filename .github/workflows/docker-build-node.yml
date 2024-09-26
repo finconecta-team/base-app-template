@@ -105,6 +105,24 @@ jobs:
           merge-multiple: true
           pattern: all_artifacts
 
+      - name: Uncompress Artifacts
+        if: ${{ ! inputs.front_end }}
+        run: |
+          if [ -f node_artifacts.tar ]; then
+            tar -xf node_artifacts.tar
+            rm node_artifacts.tar
+          else
+            echo "WARNING! No artifacts found."
+          fi
+
+      # Download Artifacts from previous jobs
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          pattern: node_build_artifact
+          path: build
+
       # Copy Dockerfile from blueprint to current dir
       - name: Copy Dockerfile Front End
         if: inputs.front_end
@@ -152,13 +170,14 @@ jobs:
         if: ${{ inputs.custom_run_command != '' }}
         run: |
           cat > ./startup.sh << EOF
-            #!/bin/sh
-          
-            # Startup the nodejs Server (custom command)
-            cd /app/webapp
-            ${{ inputs.custom_run_command }}
+          #!/bin/sh
+        
+          # Startup the nodejs Server (custom command)
+          cd /app/webapp
+          ${{ inputs.custom_run_command }}
           EOF
-          
+          cat ./startup.sh
+
       # make a multiline replacement in the Dockerfile from inputs.docker_inline the string to replace is #<DOCKER-INJECTION-POINT> sed should use different delinmiter than /
       - name: Dockerfile Injection
         run: |
@@ -175,6 +194,7 @@ jobs:
             fi
           done < "$DOCKERFILE" > "$TEMP_FILE"
           mv "$TEMP_FILE" "$DOCKERFILE"
+          cat "$DOCKERFILE"
 
       #
       # Build-X run
@@ -231,6 +251,9 @@ jobs:
         with:
           name: docker-image
           path: docker-image.tar
+          retention-days: 1
+          compression-level: '1'
+          overwrite: true
 
   docker-image-push:
     runs-on: ubuntu-latest
