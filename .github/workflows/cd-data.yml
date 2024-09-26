@@ -120,6 +120,26 @@ jobs:
         with:
           cmd: yq e -I=0 '.cd.legacyDeliveryPush' .github/cloudopsworks-ci.yaml
 
+      # Check the specific environment vars/input-*.yaml exists if not: hard fail
+      - name: Check specific environment file exists
+        id: check_env_file
+        run: |
+          fexist=false
+          if [ ! -f .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml ]; then
+            echo "File .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml does not exist"
+            exit 100
+          else
+            fexist=true
+          fi
+          echo "result=$fexist" >> $GITHUB_OUTPUT
+
+      # Recover the docker_registry value from the environment file
+      - name: Get Docker Registry value if set into the ENV file
+        id: docker_registry_value
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -I=0 '.container_registry // ""' .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml
+
       # Set the appropriate workspace from what is configured from the deploy_conf step
       # Result is stored as JSON with the format found on the cd.deployments section on .github/cloudopsworks-ci.yaml
       - name: Set the appropriate workspace
@@ -263,21 +283,24 @@ jobs:
             const helm_registry = helm ? helm.value : '';
             core.info(`${helm_registry_var} == ${helm_registry}`);
             
-            // get registry variable from org
-            const registry_var = `DOCKER_REGISTRY_ADDRESS_${environment.toUpperCase()}`;
-            const {data : registry} = await github.rest.actions.getOrgVariable({
-              org: context.repo.owner,
-              name: registry_var
-            }).then((response) => {
-              return response;
-            }).catch((error) => {
-              core.error(`Error getting ${registry_var} from org variables`);
-              core.error(error);
-              return {};
-            });
-            core.info(`${registry_var} == ${JSON.stringify(registry)}`);
-            const docker_registry = registry ? registry.value : ''; 
-            core.info(`${registry_var} == ${docker_registry}`);
+            var docker_registry = "${{ steps.docker_registry_value.outputs.result }}";
+            if ( docker_registry === '' ) {
+              // get registry variable from org
+              const registry_var = `DOCKER_REGISTRY_ADDRESS_${environment.toUpperCase()}`;
+              const {data : registry} = await github.rest.actions.getOrgVariable({
+                org: context.repo.owner,
+                name: registry_var
+              }).then((response) => {
+                return response;
+              }).catch((error) => {
+                core.error(`Error getting ${registry_var} from org variables`);
+                core.error(error);
+                return {};
+              });
+              core.info(`${registry_var} == ${JSON.stringify(registry)}`);
+              docker_registry = registry ? registry.value : ''; 
+              core.info(`${registry_var} == ${docker_registry}`);
+            }
             
             // get BUILD_AWS_REGION variable from org
             const region_var = `BUILD_AWS_REGION_${environment.toUpperCase()}`;
@@ -346,18 +369,6 @@ jobs:
         uses: mikefarah/yq@master
         with:
           cmd: yq -I=0 '.cd.runner_set // "ubuntu-latest"' .github/cloudopsworks-ci.yaml
-
-      - name: Check specific environment file exists
-        id: check_env_file
-        run: |
-          fexist=false
-          if [ ! -f .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml ]; then
-            echo "File .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml does not exist"
-          else
-            fexist=true
-          fi
-          echo "result=$fexist" >> $GITHUB_OUTPUT
-          
 
       - name: Get the Runner Set for the environment
         if: steps.check_env_file.outputs.result == 'true'
