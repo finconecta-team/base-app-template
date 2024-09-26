@@ -120,19 +120,6 @@ jobs:
         with:
           cmd: yq e -I=0 '.cd.legacyDeliveryPush' .github/cloudopsworks-ci.yaml
 
-      # Check the specific environment vars/input-*.yaml exists if not: hard fail
-      - name: Check specific environment file exists
-        id: check_env_file
-        run: |
-          fexist=false
-          if [ ! -f .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml ]; then
-            echo "File .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml does not exist"
-            exit 100
-          else
-            fexist=true
-          fi
-          echo "result=$fexist" >> $GITHUB_OUTPUT
-
       # Set the appropriate workspace from what is configured from the deploy_conf step
       # Result is stored as JSON with the format found on the cd.deployments section on .github/cloudopsworks-ci.yaml
       - name: Set the appropriate workspace
@@ -275,6 +262,19 @@ jobs:
 
             return outputV;
           github-token: ${{ secrets.token }}
+
+      # Check the specific environment vars/input-*.yaml exists if not: hard fail
+      - name: Check specific environment file exists
+        id: check_env_file
+        run: |
+          fexist=false
+          if [ ! -f .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml ]; then
+            echo "File .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml does not exist"
+            exit 100
+          else
+            fexist=true
+          fi
+          echo "result=$fexist" >> $GITHUB_OUTPUT
 
       # Recover the docker_registry value from the environment file
       - name: Get Docker Registry value if set into the ENV file
