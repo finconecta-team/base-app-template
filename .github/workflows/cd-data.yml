@@ -33,8 +33,6 @@ on:
         value: ${{ jobs.data.outputs.apisEnabled }}
       isAutomatic:
         value: ${{ jobs.data.outputs.isAutomatic }}
-      deliveryPush:
-        value: ${{ jobs.data.outputs.deliveryPush }}
       dockerRegistry:
         value: ${{ jobs.data.outputs.dockerRegistry }}
       helmRegistry:
@@ -62,7 +60,6 @@ jobs:
       cloudType: ${{ steps.cloud_type.outputs.result }}
       apisEnabled: ${{ steps.apis_enabled.outputs.result }}
       isAutomatic: ${{ steps.is_automatic.outputs.result }}
-      deliveryPush: ${{ steps.workspace.outputs.deliveryPush }}
       dockerRegistry: ${{ steps.docker_values.outputs.dockerRegistry }}
       helmRegistry: ${{ steps.helm_values.outputs.helmRegistry }}
       awsRegion: ${{ steps.aws_values.outputs.awsRegion }}
@@ -85,26 +82,26 @@ jobs:
         with:
           cmd: yq -o=json -I=0 '.cd.deployments' .github/cloudopsworks-ci.yaml
           
-      # Get the cloud entry from .github/cloudopsworks-ci.yaml as plain text
+      # Get the cloud entry from .github/vars/inputs-global.yaml as plain text
       - name: Get Cloud Entry
         id: cloud
         uses: mikefarah/yq@master
         with:
-          cmd: yq e '.cd.cloud' .github/cloudopsworks-ci.yaml | tr '[:lower:]' '[:upper:]'
+          cmd: yq e '.cloud' .github/vars/inputs-global.yaml | tr '[:lower:]' '[:upper:]'
 
-      # Get the cloud type from .github/cloudopsworks-ci.yaml as plain text
+      # Get the cloud type from github/vars/inputs-global.yaml as plain text
       - name: Get Cloud Type
         id: cloud_type
         uses: mikefarah/yq@master
         with:
-          cmd: yq e '.cd.cloud_type' .github/cloudopsworks-ci.yaml
+          cmd: yq e '.cloud_type' .github/vars/inputs-global.yaml
 
       # Get the apis enabled from .github/cloudopsworks-ci.yaml as plain text
       - name: Get APIs Enabled
         id: apis_enabled
         uses: mikefarah/yq@master
         with:
-          cmd: yq e '.cd.apis.enabled // false' .github/cloudopsworks-ci.yaml
+          cmd: yq e '.apis.enabled // false' .github/vars/inputs-global.yaml
 
       # Get the automatic setting from .github/cloudopsworks-ci.yaml as plain text
       - name: Get Automatic Setting
@@ -112,13 +109,6 @@ jobs:
         uses: mikefarah/yq@master
         with:
           cmd: yq e '.cd.automatic // false' .github/cloudopsworks-ci.yaml
-
-      # Get default Legacy delivery Push Value
-      - name: Legacy Delivery Push Value
-        uses: mikefarah/yq@v4.33.3
-        id: default_delivery_push
-        with:
-          cmd: yq e -I=0 '.cd.legacyDeliveryPush' .github/cloudopsworks-ci.yaml
 
       # Set the appropriate workspace from what is configured from the deploy_conf step
       # Result is stored as JSON with the format found on the cd.deployments section on .github/cloudopsworks-ci.yaml
@@ -140,10 +130,7 @@ jobs:
             var isEnabled = true;
             var hasQualifier = false;
             var deploymentName = '';
-            var deliveryPush = ${{ steps.default_delivery_push.outputs.result }};
-            if ( deliveryPush == null ) {
-              deliveryPush = false;
-            }
+            
             if ( branch.startsWith('support') ) {
               const oneMatch = deployments.support.find( ({ match }) => branch.match(new RegExp('support/'+match,'g')) );
               environment = oneMatch.env;
@@ -156,9 +143,6 @@ jobs:
                 targetName = deployments.test.targetName;
               }
               deploymentName = `test/${environment}`;
-              if ( 'legacyDeliveryPush' in deployments.test ) {
-                deliveryPush = deployments.test.legacyDeliveryPush;
-              }
             } else if ( branch === 'develop' ) {
               isEnabled = (deployments.develop['enabled'] == null ? true : (deployments.develop['enabled'] === 'true'));
               environment = deployments.develop.env;
@@ -166,9 +150,6 @@ jobs:
                 targetName = deployments.develop.targetName;
               }
               deploymentName = `develop/${environment}`;
-              if ( 'legacyDeliveryPush' in deployments.develop ) {
-                deliveryPush = deployments.develop.legacyDeliveryPush;
-              }
             } else {
               // This semver structure is obtained as per specification https://semver.org/ & https://regex101.com/r/vkijKf/1/
               semver = branch.match(/^v(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?/);
@@ -187,9 +168,6 @@ jobs:
                     targetName = deployments.prerelease.targets[metasuffix.groups.data].targetName;
                   }
                   deploymentName = `prerelease/${buildmeta}/${environment}`;
-                  if ( 'legacyDeliveryPush' in deployments.prerelease.targets[metasuffix.groups.data] ) {
-                    deliveryPush = deployments.prerelease.targets[metasuffix.groups.data].legacyDeliveryPush;
-                  }
                 } else if ( pre != null ) {
                   isEnabled = (deployments.prerelease['enabled'] == null ? true : (deployments.prerelease['enabled'] === 'true'));
                   // Regular expression to match following semver pattern: v1.0.2-alpha.10-uoiretu834u
@@ -199,9 +177,6 @@ jobs:
                     targetName = deployments.prerelease.targetName;
                   }
                   deploymentName = `prerelease/${environment}`;
-                  if ( 'legacyDeliveryPush' in deployments.prerelease ) {
-                    deliveryPush = deployments.prerelease.legacyDeliveryPush;
-                  }
                 } else if ( buildmeta != null ) {
                   const metasuffix = buildmeta.match(/deploy-(?<data>.*)/);
                   isRelease = true;
@@ -211,9 +186,6 @@ jobs:
                     targetName = deployments.release.targets[metasuffix.groups.data].targetName;
                   }
                   deploymentName = `release/${buildmeta}/${environment}`;
-                  if ( 'legacyDeliveryPush' in deployments.release.targets[metasuffix.groups.data] ) {
-                    deliveryPush = deployments.release.targets[metasuffix.groups.data].legacyDeliveryPush;
-                  }
                 } else {
                   isRelease = true;
                   environment = deployments.release.env;
@@ -221,9 +193,6 @@ jobs:
                     targetName = deployments.release.targetName;
                   }
                   deploymentName = `release/${environment}`;
-                  if ( 'legacyDeliveryPush' in deployments.release ) {
-                    deliveryPush = deployments.release.legacyDeliveryPush;
-                  }
                 }
               } else if ( branch === 'master' || branch === 'main' ) {
                 isRelease = true;
@@ -232,9 +201,6 @@ jobs:
                   targetName = deployments.release.targetName;
                 }
                 deploymentName = `release/${environment}`;
-                if ( 'legacyDeliveryPush' in deployments.release ) {
-                  deliveryPush = deployments.release.legacyDeliveryPush;
-                }
               } else {
                 core.setFailed('Branch not supported');
               }
@@ -247,8 +213,7 @@ jobs:
               targetName: targetName,
               isEnabled: isEnabled,
               hasQualifier: hasQualifier,
-              deploymentName: deploymentName,
-              deliveryPush: deliveryPush
+              deploymentName: deploymentName
             }; 
             core.setOutput('workspace', environment);
             core.setOutput('workspace_upper', environment.toUpperCase());
@@ -258,7 +223,6 @@ jobs:
             core.setOutput('isEnabled', isEnabled);
             core.setOutput('hasQualifier', hasQualifier);
             core.setOutput('deploymentName', deploymentName);
-            core.setOutput('deliveryPush', deliveryPush);
 
             return outputV;
           github-token: ${{ secrets.token }}
@@ -409,7 +373,7 @@ jobs:
         id: runner_set
         uses: mikefarah/yq@master
         with:
-          cmd: yq -I=0 '.cd.runner_set // "ubuntu-latest"' .github/cloudopsworks-ci.yaml
+          cmd: yq -I=0 '.runner_set // "ubuntu-latest"' .github/vars/inputs-global.yaml
 
       - name: Get the Runner Set for the environment
         if: steps.check_env_file.outputs.result == 'true'
