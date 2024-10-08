@@ -60,6 +60,10 @@ on:
         required: false
         type: string
         default: ''
+      AZURE_RG:
+        required: false
+        type: string
+        default: ''
     secrets:
       token:
         required: true
