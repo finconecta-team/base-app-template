@@ -265,7 +265,8 @@ jobs:
           sudo apt install -y gh jq curl zip unzip python3 python3-pip
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip -qo awscliv2.zip
-          sudo ./aws/install
+          which aws || sudo ./aws/install
+          which aws && sudo ./aws/install --update
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
