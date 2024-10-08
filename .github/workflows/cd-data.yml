@@ -41,8 +41,8 @@ on:
         value: ${{ jobs.data.outputs.awsRegion }}
       awsStsRoleArn:
         value: ${{ jobs.data.outputs.awsStsRoleArn }}
-      azureRG:
-        value: ${{ jobs.data.outputs.azureRG }}
+      azureResourceGroup:
+        value: ${{ jobs.data.outputs.azureResourceGroup }}
       runnerSet:
         value: ${{ jobs.data.outputs.runnerSet }}
       isLibrary:
@@ -66,7 +66,7 @@ jobs:
       helmRegistry: ${{ steps.helm_values.outputs.helmRegistry }}
       awsRegion: ${{ steps.aws_region.outputs.result }}
       awsStsRoleArn: ${{ steps.aws_sts_role_arn.outputs.result }}
-      azureRG: ${{ steps.azure_rg.outputs.result }}
+      azureResourceGroup: ${{ steps.azure_rg.outputs.result }}
       runnerSet: ${{ steps.runner_set_env.outputs.result != '' && steps.runner_set_env.outputs.result || steps.runner_set.outputs.result }}
       isLibrary: ${{ steps.is_library.outputs.result }}
 
