@@ -16,7 +16,7 @@ include {
 }
 
 terraform {
-  source = "github.com/cloudopsworks/terraform-module-aws-elasticbeanstalk-deploy.git//?ref=master"
+  source = "github.com/cloudopsworks/terraform-module-aws-elasticbeanstalk-deploy.git//?ref=release-v5"
 }
 
 inputs = {
