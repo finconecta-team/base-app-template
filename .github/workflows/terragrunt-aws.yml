@@ -187,8 +187,8 @@ jobs:
           environment: ${{ inputs.deployment_name }}
           release_name: ${{ steps.release_name.outputs.value }}
           default:
-            region: ${{ input.AWS_REGION != '' && input.AWS_REGION || vars.DEPLOYMENT_AWS_REGION }}
-            sts_role_arn: ${{ input.STS_ROLE_ARN != '' && input.STS_ROLE_ARN || vars.DEPLOYMENT_STS_ROLE_ARN }}
+            region: ${{ inputs.AWS_REGION != '' && inputs.AWS_REGION || vars.DEPLOYMENT_AWS_REGION }}
+            sts_role_arn: ${{ inputs.STS_ROLE_ARN != '' && inputs.STS_ROLE_ARN || vars.DEPLOYMENT_STS_ROLE_ARN }}
           EOF
 
       - name: Generate state_conf.yaml from vars.DEPLOYMENT_STATE_CONF
