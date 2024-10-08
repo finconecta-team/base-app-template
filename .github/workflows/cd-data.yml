@@ -41,6 +41,8 @@ on:
         value: ${{ jobs.data.outputs.awsRegion }}
       awsStsRoleArn:
         value: ${{ jobs.data.outputs.awsStsRoleArn }}
+      azureRG:
+        value: ${{ jobs.data.outputs.azureRG }}
       runnerSet:
         value: ${{ jobs.data.outputs.runnerSet }}
       isLibrary:
@@ -60,10 +62,11 @@ jobs:
       cloudType: ${{ steps.cloud_type.outputs.result }}
       apisEnabled: ${{ steps.apis_enabled.outputs.result }}
       isAutomatic: ${{ steps.is_automatic.outputs.result }}
-      dockerRegistry: ${{ steps.docker_values.outputs.dockerRegistry }}
+      dockerRegistry: ${{ steps.docker_registry.outputs.result }}
       helmRegistry: ${{ steps.helm_values.outputs.helmRegistry }}
-      awsRegion: ${{ steps.aws_values.outputs.awsRegion }}
-      awsStsRoleArn: ${{ steps.aws_values.outputs.awsStsRoleArn }}
+      awsRegion: ${{ steps.aws_region.outputs.result }}
+      awsStsRoleArn: ${{ steps.aws_sts_role_arn.outputs.result }}
+      azureRG: ${{ steps.azure_rg.outputs.result }}
       runnerSet: ${{ steps.runner_set_env.outputs.result != '' && steps.runner_set_env.outputs.result || steps.runner_set.outputs.result }}
       isLibrary: ${{ steps.is_library.outputs.result }}
 
@@ -242,132 +245,34 @@ jobs:
 
       # Recover the docker_registry value from the environment file
       - name: Get Docker Registry value if set into the ENV file
-        id: docker_registry_value
+        id: docker_registry
         uses: mikefarah/yq@master
         with:
           cmd: yq -I=0 '.container_registry // ""' .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml
 
-      # Recover the AWS Region value from the environment file
-      - name: Get AWS Region from input-(env).yaml file
-        id: aws_region_value
+      # Get the AWS Region value from the inputs-<environment>.yaml file
+      - name: Set the appropriate values for REGION
+        id: aws_region
         if: steps.cloud.outputs.result == 'AWS'
         uses: mikefarah/yq@master
         with:
-          cmd: yq -I=0 '.aws.region // ""' .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml
+          cmd: yq -I=0 '.aws.region // "us-east-1"' .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml
 
-      # Determine the values for Helm (deprecated)
-      - name: Set the appropriate values for helm
-        id: helm_values
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.token }}
-          script: |
-            const environment = '${{ steps.workspace.outputs.workspace_upper }}';
-            // Check some conditions in order to report back proper variables:
-            // HELM_REGISTRY_ADDRESS
-            // DOCKER_REGISTRY_ADDRESS
-            // BUILD_AWS_REGION
-            // BUILD_AWS_STS_ROLE_ARN
-            // 
-            // get helm registry variable from org
-            const helm_registry_var = `HELM_REGISTRY_ADDRESS_${environment}`;
-            const {data : helm} = await github.rest.actions.getOrgVariable({
-              org: context.repo.owner,
-              name: helm_registry_var
-            }).then((response) => {
-              return response;
-            }).catch((error) => {
-              core.error(`Error getting ${helm_registry_var} from org variables`);
-              core.error(error);
-              return {};
-            });
-            core.info(`${helm_registry_var} == ${JSON.stringify(helm)}`);
-            const helm_registry = helm ? helm.value : '';
-            core.info(`${helm_registry_var} == ${helm_registry}`);
-            
-            core.setOutput('helmRegistry', helm_registry);
-
-      # Determine the values for Docker Registry
-      - name: Set the appropriate values for Docker Registry
-        id: docker_values
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.token }}
-          script: |
-            const environment = '${{ steps.workspace.outputs.workspace_upper }}';
-            // Check some conditions in order to report back proper variables:
-            // DOCKER_REGISTRY_ADDRESS
-            // 
-            var docker_registry = "${{ steps.docker_registry_value.outputs.result }}";
-            if ( docker_registry === '' ) {
-              // get registry variable from org
-              const registry_var = `DOCKER_REGISTRY_ADDRESS_${environment}`;
-              const {data : registry} = await github.rest.actions.getOrgVariable({
-                org: context.repo.owner,
-                name: registry_var
-              }).then((response) => {
-                return response;
-              }).catch((error) => {
-                core.error(`Error getting ${registry_var} from org variables`);
-                core.error(error);
-                return {};
-              });
-              core.info(`${registry_var} == ${JSON.stringify(registry)}`);
-              docker_registry = registry ? registry.value : ''; 
-              core.info(`${registry_var} == ${docker_registry}`);
-            }
-            core.setOutput('dockerRegistry', docker_registry);
-
-      # Determine the AWS STS Role ARN & Region
-      - name: Set the appropriate values for AWS
-        id: aws_values
+      # Get the AWS STS Role ARN value from the inputs-<environment>.yaml file
+      - name: Set the appropriate values for STS Role ARN
+        id: aws_sts_role_arn
         if: steps.cloud.outputs.result == 'AWS'
-        uses: actions/github-script@v7
+        uses: mikefarah/yq@master
         with:
-          github-token: ${{ secrets.token }}
-          script: |
-            const environment = '${{ steps.workspace.outputs.workspace_upper }}';
-            // Check some conditions in order to report back proper variables:
-            // BUILD_AWS_REGION
-            // BUILD_AWS_STS_ROLE_ARN
-            //            
-            var aws_region = '${{ steps.aws_region_value.outputs.result }}';
-            if ( aws_region === '' ) {
-              // get BUILD_AWS_REGION variable from org
-              const region_var = `BUILD_AWS_REGION_${environment}`;
-              const {data : region} = await github.rest.actions.getOrgVariable({
-                org: context.repo.owner,
-                name: region_var
-              }).then((response) => {
-                return response;
-              }).catch((error) => {
-                core.error(`Error getting ${region_var} from org variables`);
-                core.error(error);
-                return {};
-              });
-              core.info(`${region_var} == ${JSON.stringify(region)}`);
-              aws_region = region ? region.value : '';
-              core.info(`${region_var} == ${aws_region}`);
-            }
+          cmd: yq -I=0 '.aws.sts_role_arn // ""' .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml
 
-            // get BUILD_AWS_STS_ROLE_ARN variable from org
-            const sts_role_var = `BUILD_AWS_STS_ROLE_ARN_${environment.toUpperCase()}`;
-            const {data : sts_role} = await github.rest.actions.getOrgVariable({
-              org: context.repo.owner,
-              name: sts_role_var
-            }).then((response) => {
-              return response;
-            }).catch((error) => {
-              core.error(`Error getting ${sts_role_var} from org variables`);
-              core.error(error);
-              return {};
-            });
-            core.info(`${sts_role_var} == ${JSON.stringify(sts_role)}`);
-            const aws_sts_role = sts_role ? sts_role.value : '';
-            core.info(`${sts_role_var} == ${aws_sts_role}`);
-      
-            core.setOutput('awsRegion', aws_region);
-            core.setOutput('awsStsRoleArn', aws_sts_role);
+      # Get the Azure RG value from the inputs-<environment>.yaml file
+      - name: Set the appropriate values for Azure RG
+        id: azure_rg
+        if: steps.cloud.outputs.result == 'AZURE'
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -I=0 '.azure.resource_group // "no-resource-group"' .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml
 
       - name: Get the Runner Set for this build
         id: runner_set
