@@ -68,6 +68,10 @@ on:
         required: false
         type: string
         default: ''
+      sources_artifacts:
+        required: false
+        type: string
+        default: ''
     secrets:
       token:
         required: true
