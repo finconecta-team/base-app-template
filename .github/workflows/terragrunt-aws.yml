@@ -100,7 +100,7 @@ jobs:
           path: cd-${{ inputs.environment }}
           fetch-depth: 1
           #ref: v${{ env.base_app_version }}
-          ref: develop
+          ref: develop #TODO: Change to v${{ env.base_app_version }}
           token: ${{ secrets.token }}
 
       # Get the owner repo
@@ -286,7 +286,7 @@ jobs:
           path: cd-${{ inputs.environment }}
           fetch-depth: 1
           #ref: v${{ env.base_app_version }}
-          ref: develop
+          ref: develop #TODO: Change to v${{ env.base_app_version }}
           token: ${{ secrets.token }}
 
       - name: Restore Pipeline Artifacts
