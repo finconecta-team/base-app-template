@@ -60,6 +60,10 @@ on:
         required: false
         type: string
         default: ''
+      download_artifacts:
+        required: false
+        type: string
+        default: ''
     secrets:
       token:
         required: true
@@ -282,6 +286,13 @@ jobs:
           fetch-depth: 1
           ref: v${{ env.base_app_version }}
           token: ${{ secrets.token }}
+
+      - name: Restore Pipeline Artifacts
+        uses: actions/download-artifact@v4
+        if: ${{ inputs.download_artifacts != '' }}
+        with:
+          name: ${{ inputs.download_artifacts }}
+          path: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
 
       - name: Restore Plan File
         uses: actions/download-artifact@v4

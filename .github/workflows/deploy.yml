@@ -64,6 +64,10 @@ on:
         required: false
         type: string
         default: ''
+      download_artifacts:
+        required: false
+        type: string
+        default: ''
     secrets:
       token:
         required: true
@@ -116,6 +120,7 @@ jobs:
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
       STS_ROLE_ARN: ${{ inputs.STS_ROLE_ARN }}
+      download_artifacts: ${{ inputs.download_artifacts }}
     secrets: inherit
 
   deploy-aws-eks:
