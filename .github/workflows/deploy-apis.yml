@@ -55,6 +55,14 @@ on:
         required: false
         type: string
         default: ''
+      download_artifacts:
+        required: false
+        type: string
+        default: ''
+      source_artifacts:
+        required: false
+        type: string
+        default: ''
     secrets:
       token:
         required: true

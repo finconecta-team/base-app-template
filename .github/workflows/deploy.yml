@@ -68,7 +68,7 @@ on:
         required: false
         type: string
         default: ''
-      sources_artifacts:
+      source_artifacts:
         required: false
         type: string
         default: ''
