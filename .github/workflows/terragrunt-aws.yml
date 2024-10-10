@@ -64,6 +64,10 @@ on:
         required: false
         type: string
         default: ''
+      qualifier:
+        required: false
+        type: string
+        default: ''
     secrets:
       token:
         required: true
@@ -176,7 +180,7 @@ jobs:
         run: |
           cat > release.yaml << EOF 
           release:
-            name: ${{ steps.release_name.outputs.value }}
+            name: ${{ steps.release_name.outputs.value }}${{ inputs.qualifier != '' && '-' || '' }}${{ inputs.qualifier }}
             source:
               name: ${{ steps.getowner.outputs.repo_name }}
               version: ${{ inputs.release_version }}
@@ -190,7 +194,7 @@ jobs:
         run: |
           cat > global-inputs.yaml << EOF
           environment: ${{ inputs.deployment_name }}
-          release_name: ${{ steps.release_name.outputs.value }}
+          release_name: ${{ steps.release_name.outputs.value }}${{ inputs.qualifier != '' && '-' || '' }}${{ inputs.qualifier }}
           default:
             region: ${{ inputs.AWS_REGION != '' && inputs.AWS_REGION || vars.DEPLOYMENT_AWS_REGION }}
             sts_role_arn: ${{ inputs.STS_ROLE_ARN != '' && inputs.STS_ROLE_ARN || vars.DEPLOYMENT_STS_ROLE_ARN }}
