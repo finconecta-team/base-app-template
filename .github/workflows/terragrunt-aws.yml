@@ -326,13 +326,13 @@ jobs:
       - name: Get pipeline Java version
         id: java_version
         run: |
-          VAL=$(yq e '.java.version // "17"' ./source/.github/vars/inputs-global.yaml)
+          VAL=$(yq e '.java.version // "21"' ./source/.github/vars/inputs-global.yaml)
           echo "result=$VAL" >> $GITHUB_OUTPUT
       # Get pipeline conf java dist
       - name: Get pipeline Java dist
         id: java_dist
         run: |
-          VAL=$(yq e '.java.dist // "adopt"' ./source/.github/vars/inputs-global.yaml)
+          VAL=$(yq e '.java.dist // "temurin"' ./source/.github/vars/inputs-global.yaml)
           echo "result=$VAL" >> $GITHUB_OUTPUT
       # Setup Java JDK for builds
       - name: Set JDK
