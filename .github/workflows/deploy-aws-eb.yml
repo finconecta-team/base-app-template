@@ -88,31 +88,10 @@ on:
         required: false
 
 jobs:
-  project_data:
-    runs-on: ubuntu-latest
-    outputs:
-      project_name: ${{ steps.getowner.outputs.repo_name }}
-    steps:
-      # Get the owner repo
-      - name: Get owner
-        id: getowner
-        run: |
-          repo_owner=`echo "$GITHUB_REPOSITORY" | cut -f 1 -d "/"`
-          repo_name=`echo "$GITHUB_REPOSITORY" | cut -f 2 -d "/"`
-          echo "owner=$repo_owner" >> $GITHUB_OUTPUT
-          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
-      - name: outputs
-        run: |
-          echo "cloud:      ${{ inputs.target_cloud }}"
-          echo "cloud_type: ${{ inputs.target_cloud_type }}"
-
-  deploy-aws-eb:
-    needs:
-      - project_data
-    uses: ./.github/workflows/deploy-aws-eb.yml
-    if: ${{ inputs.target_cloud == 'AWS' && ( inputs.target_cloud_type == 'eb' || inputs.target_cloud_type == 'elasticbeanstalk' ) }}
+  deploy-aws-eb-standard:
+    uses: ./.github/workflows/terragrunt-aws.yml
+    if: ${{ ! inputs.is_release }}
     with:
-      is_release: ${{ inputs.is_release }}
       release_version: ${{ inputs.release_version }}
       release_name: ${{ inputs.release_name }}
       environment: ${{ inputs.environment }}
@@ -131,20 +110,18 @@ jobs:
       download_artifacts: ${{ inputs.download_artifacts }}
     secrets: inherit
 
-  deploy-aws-eks:
-    needs:
-      - project_data
+  deploy-aws-eb-green:
     uses: ./.github/workflows/terragrunt-aws.yml
-    if: ${{ inputs.target_cloud == 'AWS' && ( inputs.target_cloud_type == 'kubernetes' || inputs.target_cloud_type == 'eks' ) }}
+    if: ${{ inputs.is_release }}
     with:
       release_version: ${{ inputs.release_version }}
-      release_name: ${{ inputs.release_name }}
+      release_name: ${{ inputs.release_name }}_green
       environment: ${{ inputs.environment }}
       package_name: ${{ inputs.package_name }}
       package_type: ${{ inputs.package_type }}
-      deployment_name: ${{ inputs.deployment_name }}
+      deployment_name: ${{ inputs.deployment_name }}_green
       target_cloud: 'aws'
-      target_cloud_type: 'kubernetes'
+      target_cloud_type: 'beanstalk'
       runner_set: ${{ inputs.runner_set }}
       DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
       HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
@@ -152,13 +129,14 @@ jobs:
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
       STS_ROLE_ARN: ${{ inputs.STS_ROLE_ARN }}
+      download_artifacts: ${{ inputs.download_artifacts }}
     secrets: inherit
 
-  deploy-aws-lambda:
+  deploy-aws-eb-blue:
     needs:
-      - project_data
+      - deploy-aws-eb-green
     uses: ./.github/workflows/terragrunt-aws.yml
-    if: ${{ inputs.target_cloud == 'AWS' && inputs.target_cloud_type == 'lambda' }}
+    if: ${{ inputs.is_release }}
     with:
       release_version: ${{ inputs.release_version }}
       release_name: ${{ inputs.release_name }}
@@ -167,7 +145,7 @@ jobs:
       package_type: ${{ inputs.package_type }}
       deployment_name: ${{ inputs.deployment_name }}
       target_cloud: 'aws'
-      target_cloud_type: 'lambda'
+      target_cloud_type: 'beanstalk'
       runner_set: ${{ inputs.runner_set }}
       DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
       HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
@@ -175,4 +153,31 @@ jobs:
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
       STS_ROLE_ARN: ${{ inputs.STS_ROLE_ARN }}
+      download_artifacts: ${{ inputs.download_artifacts }}
+    secrets: inherit
+
+  destroy-aws-eb-green:
+    needs:
+      - deploy-aws-eb-green
+      - deploy-aws-eb-blue
+    uses: ./.github/workflows/terragrunt-aws.yml
+    if: ${{ inputs.is_release }}
+    with:
+      destroy: true
+      release_version: ${{ inputs.release_version }}
+      release_name: ${{ inputs.release_name }}_green
+      environment: ${{ inputs.environment }}
+      package_name: ${{ inputs.package_name }}
+      package_type: ${{ inputs.package_type }}
+      deployment_name: ${{ inputs.deployment_name }}_green
+      target_cloud: 'aws'
+      target_cloud_type: 'beanstalk'
+      runner_set: ${{ inputs.runner_set }}
+      DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
+      HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
+      BOT_USER: ${{ inputs.BOT_USER }}
+      BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
+      AWS_REGION: ${{ inputs.AWS_REGION }}
+      STS_ROLE_ARN: ${{ inputs.STS_ROLE_ARN }}
+      download_artifacts: ${{ inputs.download_artifacts }}
     secrets: inherit
