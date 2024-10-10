@@ -37,9 +37,6 @@ on:
       target_cloud_type:
         required: true
         type: string
-      apis_enabled:
-        required: true
-        type: boolean
       runner_set:
         required: true
         type: string
