@@ -161,7 +161,7 @@ jobs:
         if: ${{ inputs.target_cloud_type == 'beanstalk' || inputs.target_cloud_type == 'lambda' }}
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
-          find values/${{ steps.release_name.outputs.value }} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ steps.release_name.outputs.value }}
+          find values/${{ steps.release_name.outputs.value }} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ steps.release_name.outputs.value }}${{ inputs.qualifier != '' && '-' || '' }}${{ inputs.qualifier }}
 
       - name: Copy Values Bundle
         if: ${{ inputs.target_cloud_type == 'kubernetes' }}
