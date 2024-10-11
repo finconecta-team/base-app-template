@@ -15,9 +15,15 @@ jobs:
   on-pr:
     runs-on: ubuntu-latest
     steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.token }}
+
       - uses: actions/labeler@v5
         with:
           repo-token: ${{ secrets.token }}
+
       - name: test
         run:
           echo "REF=${{ github.ref }}"
