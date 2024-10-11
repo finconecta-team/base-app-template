@@ -136,6 +136,7 @@ jobs:
     uses: ./.github/workflows/terragrunt-aws.yml
     if: ${{ inputs.is_release }}
     with:
+      qualifier: 'a'
       release_version: ${{ inputs.release_version }}
       release_name: ${{ inputs.release_name }}
       environment: ${{ inputs.environment }}

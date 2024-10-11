@@ -161,7 +161,7 @@ jobs:
         if: ${{ inputs.target_cloud_type == 'beanstalk' || inputs.target_cloud_type == 'lambda' }}
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
-          find values/${{ steps.release_name.outputs.value }} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ steps.release_name.outputs.value }}${{ inputs.qualifier != '' && '-' || '' }}${{ inputs.qualifier }}
+          find values/${{ steps.release_name.outputs.value }} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ steps.release_name.outputs.value }}
 
       - name: Copy Values Bundle
         if: ${{ inputs.target_cloud_type == 'kubernetes' }}
@@ -180,7 +180,8 @@ jobs:
         run: |
           cat > release.yaml << EOF 
           release:
-            name: ${{ steps.release_name.outputs.value }}${{ inputs.qualifier != '' && '-' || '' }}${{ inputs.qualifier }}
+            name: ${{ steps.release_name.outputs.value }}
+            qualifier: ${{ inputs.qualifier }}
             source:
               name: ${{ steps.getowner.outputs.repo_name }}
               version: ${{ inputs.release_version }}
@@ -193,8 +194,8 @@ jobs:
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}
         run: |
           cat > global-inputs.yaml << EOF
-          environment: ${{ inputs.deployment_name }}
-          release_name: ${{ steps.release_name.outputs.value }}${{ inputs.qualifier != '' && '-' || '' }}${{ inputs.qualifier }}
+          environment: ${{ inputs.deployment_name }}${{ inputs.qualifier != '' && '/' || '' }}${{ inputs.qualifier }}
+          release_name: ${{ steps.release_name.outputs.value }}
           default:
             region: ${{ inputs.AWS_REGION != '' && inputs.AWS_REGION || vars.DEPLOYMENT_AWS_REGION }}
             sts_role_arn: ${{ inputs.STS_ROLE_ARN != '' && inputs.STS_ROLE_ARN || vars.DEPLOYMENT_STS_ROLE_ARN }}
