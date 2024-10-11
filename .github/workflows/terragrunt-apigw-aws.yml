@@ -55,7 +55,7 @@ on:
         required: false
         type: boolean
         default: false
-      unlock_id:
+      lock_id:
         required: false
         type: string
         default: ''
@@ -191,7 +191,7 @@ jobs:
               console.log('destroy');
             } else {
               if (is_unlock) {
-                core.setOutput('value', 'force-unlock -force ${{ inputs.unlock_id }}')
+                core.setOutput('value', 'force-unlock -force ${{ inputs.lock_id }}')
                 console.log('unlock');
               } else {
                 core.setOutput('value', 'plan')
