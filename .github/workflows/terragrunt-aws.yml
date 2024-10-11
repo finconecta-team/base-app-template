@@ -68,6 +68,14 @@ on:
         required: false
         type: string
         default: ''
+      unlock:
+        required: false
+        type: boolean
+        default: false
+      unlock_id:
+        required: false
+        type: string
+        default: ''
     secrets:
       token:
         required: true
@@ -214,12 +222,18 @@ jobs:
         with:
           script: |
             const is_destroy = ${{ inputs.destroy }};
+            const is_unlock = ${{ inputs.unlock }};
             if (is_destroy) {
               core.setOutput('value', 'plan -destroy')
               console.log('destroy');
             } else {
-              core.setOutput('value', 'plan')
-              console.log('apply');
+              if (is_unlock) {
+                core.setOutput('value', 'force-unlock -force ${{ inputs.unlock_id }}')
+                console.log('unlock');
+              } else {
+                core.setOutput('value', 'plan')
+                console.log('apply');
+              }
             }
 
       - name: Terragrunt Plan
@@ -237,6 +251,7 @@ jobs:
 
       - name: Terragrunt Plan to JSON
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        if: ${{ ! inputs.unlock }}
         run: terragrunt --terragrunt-non-interactive show -json plan.tfplan > tfplan.json
         continue-on-error: true
         env:
@@ -246,10 +261,12 @@ jobs:
 
       - name: TF Summarize of JSON file
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        if: ${{ ! inputs.unlock }}
         run: tf-summarize tfplan.json
 
       - name: Save Plan File
         uses: actions/upload-artifact@v4
+        if: ${{ ! inputs.unlock }}
         with:
           name: plan-file-aws-${{ inputs.target_cloud_type }}
           retention-days: 1
@@ -266,6 +283,7 @@ jobs:
       - deployment-plan
     runs-on: ${{ inputs.runner_set }}
     environment: ${{ inputs.deployment_name }}
+    if: ${{ ! inputs.unlock }}
     steps:
       - name: Install runner-tools
         run: |
