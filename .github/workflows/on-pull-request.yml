@@ -74,7 +74,7 @@ jobs:
             });
             var mil_number = 0;
             for ( const mil of mil_list.data ) {
-              if ( mil.title == rel_version ) {
+              if ( mil.title === rel_version ) {
                 mil_number = mil.number;
               }
             }
@@ -117,7 +117,7 @@ jobs:
             
             var reviewers = []
             for ( const rev of reviewers_json ) {
-              if ( actor != rev ) {
+              if ( actor !== rev ) {
                 reviewers.push(rev)
               }
             }
