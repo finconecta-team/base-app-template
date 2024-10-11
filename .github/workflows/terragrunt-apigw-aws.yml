@@ -187,14 +187,14 @@ jobs:
             const is_destroy = ${{ inputs.destroy }};
             const is_unlock = ${{ inputs.unlock }};
             if (is_destroy) {
-              core.setOutput('value', 'plan -destroy')
+              core.setOutput('value', 'plan -destroy -no-color -input=false')
               console.log('destroy');
             } else {
               if (is_unlock) {
-                core.setOutput('value', 'force-unlock ${{ inputs.lock_id }}')
+                core.setOutput('value', 'force-unlock -force ${{ inputs.lock_id }}')
                 console.log('unlock');
               } else {
-                core.setOutput('value', 'plan')
+                core.setOutput('value', 'plan -no-color -input=false')
                 console.log('apply');
               }
             }
@@ -202,7 +202,7 @@ jobs:
       - name: Terragrunt Plan
         id: plan
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
-        run: terragrunt --terragrunt-non-interactive ${{ steps.plan_action.outputs.value }} -no-color -input=false
+        run: terragrunt --terragrunt-non-interactive ${{ steps.plan_action.outputs.value }}
         continue-on-error: false
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
