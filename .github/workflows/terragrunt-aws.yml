@@ -228,7 +228,7 @@ jobs:
               console.log('destroy');
             } else {
               if (is_unlock) {
-                core.setOutput('value', '-force force-unlock ${{ inputs.lock_id }}')
+                core.setOutput('value', 'force-unlock ${{ inputs.lock_id }}')
                 console.log('unlock');
               } else {
                 core.setOutput('value', 'plan')
