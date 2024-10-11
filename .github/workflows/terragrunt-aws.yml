@@ -268,7 +268,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: ${{ ! inputs.unlock }}
         with:
-          name: plan-file-aws-${{ inputs.target_cloud_type }}
+          name: plan-file-aws-${{ inputs.target_cloud_type }}${{ inputs.qualifier != '' && '-' || '' }}${{ inputs.qualifier }}
           retention-days: 1
           include-hidden-files: true
           path: |
@@ -322,7 +322,7 @@ jobs:
       - name: Restore Plan File
         uses: actions/download-artifact@v4
         with:
-          name: plan-file-aws-${{ inputs.target_cloud_type }}
+          name: plan-file-aws-${{ inputs.target_cloud_type }}${{ inputs.qualifier != '' && '-' || '' }}${{ inputs.qualifier }}
           path: cd-${{ inputs.environment }}
 
       ### DEV TOOLS
