@@ -58,6 +58,10 @@ on:
       AWS_REGION:
         required: false
         type: string
+      qualifier:
+        required: false
+        type: string
+        default: ''
     secrets:
       token:
         required: true
@@ -94,6 +98,7 @@ jobs:
     if: ${{ inputs.target_cloud == 'AWS' && ( inputs.target_cloud_type == 'eb' || inputs.target_cloud_type == 'elasticbeanstalk' ) }}
     with:
       unlock: true
+      qualifier: ${{ inputs.qualifier }}
       unlock_id: ${{ inputs.unlock_id }}
       release_version: ${{ inputs.release_version }}
       release_name: ${{ inputs.release_name }}
