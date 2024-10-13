@@ -381,14 +381,14 @@ jobs:
         id: java_stack
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
-          VAL=$(yq eval '.beanstalk.solution_stack | test("(?i:.*java.*)")'' inputs.yaml)
+          VAL=$(yq eval '.beanstalk.solution_stack | test("(?i:.*java.*)")' inputs.yaml)
           echo "result=$VAL" >> $GITHUB_OUTPUT
 
       - name: Get Node Stack from inputs-${{ inputs.environment }}.yaml
         id: node_stack
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
-          VAL=$(yq eval '.beanstalk.solution_stack | test("(?i:.*node.*)")'' inputs.yaml)
+          VAL=$(yq eval '.beanstalk.solution_stack | test("(?i:.*node.*)")' inputs.yaml)
           echo "result=$VAL" >> $GITHUB_OUTPUT
 
       - name: Get Release Name
