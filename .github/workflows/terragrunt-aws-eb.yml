@@ -411,6 +411,12 @@ jobs:
           temp_dir=$(mktemp -d)
           echo "result=$temp_dir" >> $GITHUB_OUTPUT
 
+      - name: DEBUG
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          pwd
+          ls -ltR
+
       - name: Copy .env into for NodeJS
         if: ${{ steps.node_stack.outputs.result == 'true' }}
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
