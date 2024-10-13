@@ -165,9 +165,12 @@ jobs:
           cp -pfR source/.github/values/${{ inputs.environment }}/${{ steps.release_name.outputs.value }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
 
       - name: Create Hash value for values bundle
+        id: hash_value
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
           find values/${{ steps.release_name.outputs.value }} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ steps.release_name.outputs.value }}
+          VAL=$(cat .values_hash_${{ steps.release_name.outputs.result }} | cut -d ' ' -f 1 | tr "[:lower:]" "[:upper:]")
+          echo "result=$VAL" >> $GITHUB_OUTPUT
 
       - name: Generate release.yaml
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
@@ -183,6 +186,7 @@ jobs:
                 name: '${{ inputs.package_name }}'
                 type: ${{ inputs.package_type }}
           bucket_path: ${{ steps.release_name.outputs.result }}/${{ inputs.release_version }}/${{ steps.release_name.outputs.result }}-${{ inputs.release_version }}-${{ steps.hash_value.outputs.result }}.zip
+          version_label: ${{ steps.release_name.outputs.result }}-${{ inputs.release_version }}-${{ steps.hash_value.outputs.result }}
           EOF
 
       - name: Generate Global Inputs global-inputs.yaml
@@ -399,13 +403,6 @@ jobs:
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
           VAL=$(yq eval '.bucket_path' release.yaml)
-          echo "result=$VAL" >> $GITHUB_OUTPUT
-
-      - name: Get Hash Value
-        id: hash_value
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
-        run: |
-          VAL=$(cat .values_hash_${{ steps.release_name.outputs.result }} | cut -d ' ' -f 1 | tr "[:lower:]" "[:upper:]")
           echo "result=$VAL" >> $GITHUB_OUTPUT
 
       - name: Create temp_dir
