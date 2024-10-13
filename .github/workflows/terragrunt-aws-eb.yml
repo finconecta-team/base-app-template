@@ -407,14 +407,14 @@ jobs:
           echo "result=$temp_dir" >> $GITHUB_OUTPUT
 
       - name: Copy .env into for NodeJS
-        id: steps.node_stack.outputs.result == 'true'
+        id: ${{ steps.node_stack.outputs.result == 'true' }}
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
           [ -f values/${{ inputs.environment }}/.env ] && cp -p values/${{ inputs.environment }}/.env ${{ steps.temp_dir.outputs.result }}
 
       - name: Copy Java Application Release
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release
-        if: steps.java_stack.outputs.result == 'true'
+        if: ${{ steps.java_stack.outputs.result == 'true' }}
         run: |
           cp -p ./*.jar ${{ steps.temp_dir.outputs.result }}/app.jar
 
