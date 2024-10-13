@@ -86,7 +86,7 @@ on:
 
 jobs:
   deploy-aws-eb-standard:
-    uses: ./.github/workflows/terragrunt-aws.yml
+    uses: ./.github/workflows/terragrunt-aws-eb.yml
     if: ${{ ! inputs.is_release }}
     with:
       release_version: ${{ inputs.release_version }}
@@ -108,7 +108,7 @@ jobs:
     secrets: inherit
 
   deploy-aws-eb-green:
-    uses: ./.github/workflows/terragrunt-aws.yml
+    uses: ./.github/workflows/terragrunt-aws-eb.yml
     if: ${{ inputs.is_release }}
     with:
       qualifier: 'green'
@@ -133,7 +133,7 @@ jobs:
   deploy-aws-eb-blue:
     needs:
       - deploy-aws-eb-green
-    uses: ./.github/workflows/terragrunt-aws.yml
+    uses: ./.github/workflows/terragrunt-aws-eb.yml
     if: ${{ inputs.is_release }}
     with:
       qualifier: 'a'

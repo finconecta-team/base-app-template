@@ -1,0 +1,455 @@
+##
+# (c) 2024 - Cloud Ops Works LLC - https://cloudops.works/
+#            On GitHub: https://github.com/cloudopsworks
+#            Distributed Under Apache v2.0 License
+#
+name: Deploy to AWS Elastic Beanstalk
+on:
+  workflow_call:
+    inputs:
+      destroy:
+        required: false
+        type: boolean
+        default: false
+      release_version:
+        required: true
+        type: string
+      release_name:
+        required: false
+        type: string
+      environment:
+        required: true
+        type: string
+      package_name:
+        required: false
+        type: string
+        default: ''
+      package_type:
+        required: false
+        type: string
+        default: ''
+      deployment_name:
+        required: true
+        type: string
+      target_cloud:
+        required: true
+        type: string
+      target_cloud_type:
+        required: true
+        type: string
+      runner_set:
+        required: true
+        type: string
+      DOCKER_REGISTRY_ADDRESS:
+        required: false
+        type: string
+      HELM_REGISTRY_ADDRESS:
+        required: false
+        type: string
+      BOT_USER:
+        required: true
+        type: string
+      BOT_EMAIL:
+        required: true
+        type: string
+      AWS_REGION:
+        required: false
+        type: string
+        default: ''
+      STS_ROLE_ARN:
+        required: false
+        type: string
+        default: ''
+      download_artifacts:
+        required: false
+        type: string
+        default: ''
+      qualifier:
+        required: false
+        type: string
+        default: ''
+      unlock:
+        required: false
+        type: boolean
+        default: false
+      lock_id:
+        required: false
+        type: string
+        default: ''
+    secrets:
+      token:
+        required: true
+      AWS_ACCESS_KEY_ID:
+        required: false
+      AWS_SECRET_ACCESS_KEY:
+        required: false
+      AZURE_SERVICE_ID:
+        required: false
+      AZURE_SERVICE_SECRET:
+        required: false
+
+env:
+  tofu_version: 1.7.1
+  tg_version: 0.59.5
+  base_app_version: 5
+  tf_summarize_version: 0.3.10
+jobs:
+  deployment-plan:
+    runs-on: ${{ inputs.runner_set }}
+    environment: ${{ inputs.deployment_name }}
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          path: source
+          fetch-depth: 1
+          token: ${{ secrets.token }}
+
+      - name: Checkout Base App Template
+        uses: actions/checkout@v4
+        with:
+          repository: cloudopsworks/base-app-template
+          path: cd-${{ inputs.environment }}
+          fetch-depth: 1
+          #ref: v${{ env.base_app_version }}
+          ref: develop #TODO: Change to v${{ env.base_app_version }}
+          token: ${{ secrets.token }}
+
+      # Get the owner repo
+      - name: Get owner
+        id: getowner
+        run: |
+          repo_owner=`echo "$GITHUB_REPOSITORY" | cut -f 1 -d "/"`
+          repo_name=`echo "$GITHUB_REPOSITORY" | cut -f 2 -d "/"`
+          echo "owner=$repo_owner" >> $GITHUB_OUTPUT
+          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
+
+      - name: Set Final Release Name
+        id: release_name
+        run: |
+          REL=
+          if [ -z "${{ inputs.release_name }}" ]; then
+            REL="${{ steps.getowner.outputs.repo_name }}"
+          else
+            REL="${{ inputs.release_name }}"
+          fi
+          echo "value=$REL" >> $GITHUB_OUTPUT
+
+      - name: Terraform Plan prettifier
+        uses: kishaningithub/setup-tf-summarize@v2
+        with:
+          github-token: ${{ secrets.BOT_TOKEN }}
+          tf-summarize-version: v${{ env.tf_summarize_version }}
+
+      - name: Setup OpenTofu
+        id: setup_opentofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.tofu_version }}
+          tofu_wrapper: false
+
+      - name: Setup Terragrunt v${{ env.tg_version }}
+        run: |
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.tg_version }}/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+          terragrunt -v
+
+      - name: Copy configurations
+        run: |
+          cp -pf source/.github/vars/inputs-${{ inputs.environment }}.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/inputs.yaml
+          cp -pf source/.github/vars/inputs-global.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/
+
+      - name: Copy Values Bundle
+        run: |
+          mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+          cp -pfR source/.github/values/${{ inputs.environment }}/${{ steps.release_name.outputs.value }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+
+      - name: Create Hash value for values bundle
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          find values/${{ steps.release_name.outputs.value }} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ steps.release_name.outputs.value }}
+
+      - name: Generate release.yaml
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          cat > release.yaml << EOF 
+          release:
+            name: ${{ steps.release_name.outputs.value }}
+            qualifier: ${{ inputs.qualifier }}
+            source:
+              name: ${{ steps.getowner.outputs.repo_name }}
+              version: ${{ inputs.release_version }}
+              githubPackages:
+                name: '${{ inputs.package_name }}'
+                type: ${{ inputs.package_type }}
+          EOF
+
+      - name: Generate Global Inputs global-inputs.yaml
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}
+        run: |
+          cat > global-inputs.yaml << EOF
+          environment: ${{ inputs.deployment_name }}${{ inputs.qualifier != '' && '/' || '' }}${{ inputs.qualifier }}
+          release_name: ${{ steps.release_name.outputs.value }}
+          default:
+            region: ${{ inputs.AWS_REGION != '' && inputs.AWS_REGION || vars.DEPLOYMENT_AWS_REGION }}
+            sts_role_arn: ${{ inputs.STS_ROLE_ARN != '' && inputs.STS_ROLE_ARN || vars.DEPLOYMENT_STS_ROLE_ARN }}
+          EOF
+
+      - name: Generate state_conf.yaml from vars.DEPLOYMENT_STATE_CONF
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}
+        run: |
+          cat > state_conf.yaml << EOF
+          ${{ vars.DEPLOYMENT_STATE_CONF }}
+          EOF
+
+      - name: Determine Plan Action
+        uses: actions/github-script@v7
+        id: plan_action
+        with:
+          script: |
+            const is_destroy = ${{ inputs.destroy }};
+            const is_unlock = ${{ inputs.unlock }};
+            if (is_destroy) {
+              core.setOutput('value', 'plan -destroy -no-color -input=false')
+              console.log('destroy');
+            } else {
+              if (is_unlock) {
+                core.setOutput('value', 'force-unlock -force ${{ inputs.lock_id }}')
+                console.log('unlock');
+              } else {
+                core.setOutput('value', 'plan -no-color -input=false')
+                console.log('apply');
+              }
+            }
+
+      - name: Terragrunt Plan
+        id: plan
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: terragrunt --terragrunt-non-interactive ${{ steps.plan_action.outputs.value }}
+        continue-on-error: false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          HELM_CREDS_USER: ${{ secrets.AZURE_SERVICE_ID }}
+          HELM_CREDS_PASSWORD: ${{ secrets.AZURE_SERVICE_SECRET }}
+          HELM_EXPERIMENTAL_OCI: "1"
+          GITHUB_API_TOKEN: ${{ secrets.token }}
+
+      - name: Terragrunt Plan to JSON
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        if: ${{ ! inputs.unlock }}
+        run: terragrunt --terragrunt-non-interactive show -json plan.tfplan > tfplan.json
+        continue-on-error: true
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GITHUB_API_TOKEN: ${{ secrets.token }}
+
+      - name: TF Summarize of JSON file
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        if: ${{ ! inputs.unlock }}
+        run: tf-summarize tfplan.json
+
+      - name: Save Plan File
+        uses: actions/upload-artifact@v4
+        if: ${{ ! inputs.unlock }}
+        with:
+          name: plan-file-aws-${{ inputs.target_cloud_type }}${{ inputs.qualifier != '' && '-' || '' }}${{ inputs.qualifier }}
+          retention-days: 1
+          include-hidden-files: true
+          path: |
+            cd-${{ inputs.environment }}/**/values/**/*
+            cd-${{ inputs.environment }}/**/.values_hash_*
+            cd-${{ inputs.environment }}/**/*.yaml
+            cd-${{ inputs.environment }}/**/plan.tfplan
+            !cd-${{ inputs.environment }}/**/.terragrunt-cache/**/*
+
+  deployment-apply:
+    needs:
+      - deployment-plan
+    runs-on: ${{ inputs.runner_set }}
+    environment: ${{ inputs.deployment_name }}
+    if: ${{ ! inputs.unlock }}
+    steps:
+      - name: Install runner-tools
+        run: |
+          (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
+          && sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && \
+          sudo chmod +x /usr/bin/yq
+          sudo apt install -y gh jq curl zip unzip python3 python3-pip
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -qo awscliv2.zip
+          which aws || sudo ./aws/install
+          which aws && sudo ./aws/install --update
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          path: source
+          fetch-depth: 1
+          token: ${{ secrets.token }}
+
+      - name: Checkout Base App Template
+        uses: actions/checkout@v4
+        with:
+          repository: cloudopsworks/base-app-template
+          path: cd-${{ inputs.environment }}
+          fetch-depth: 1
+          #ref: v${{ env.base_app_version }}
+          ref: develop #TODO: Change to v${{ env.base_app_version }}
+          token: ${{ secrets.token }}
+
+      - name: Restore Pipeline Artifacts
+        uses: actions/download-artifact@v4
+        if: ${{ inputs.download_artifacts != '' }}
+        with:
+          name: ${{ inputs.download_artifacts }}
+          path: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release
+
+      - name: Restore Plan File
+        uses: actions/download-artifact@v4
+        with:
+          name: plan-file-aws-${{ inputs.target_cloud_type }}${{ inputs.qualifier != '' && '-' || '' }}${{ inputs.qualifier }}
+          path: cd-${{ inputs.environment }}
+
+      ### DEV TOOLS
+      # Get pipeline conf node version
+      - name: Get pipeline node version
+        id: node_version
+        run: | 
+          VAL=$(yq eval '.node.version // "20"' ./source/.github/vars/inputs-global.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+      # Get pipeline conf node dist
+      - name: Get pipeline node dist
+        id: node_dist
+        run: |
+          VAL=$(yq eval '.node.dist // "adopt"' ./source/.github/vars/inputs-global.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+      # Setup Node JS for builds with version provided
+      - name: Set Node Version
+        uses: actions/setup-node@v4
+        with:
+          node-version: "${{ steps.node_version.outputs.result }}"
+          check-latest: true
+          token: ${{ secrets.BOT_TOKEN }}
+      # Get pipeline conf java version
+      - name: Get pipeline Java version
+        id: java_version
+        run: |
+          VAL=$(yq e '.java.version // "21"' ./source/.github/vars/inputs-global.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+      # Get pipeline conf java dist
+      - name: Get pipeline Java dist
+        id: java_dist
+        run: |
+          VAL=$(yq e '.java.dist // "temurin"' ./source/.github/vars/inputs-global.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      # Setup Java JDK for builds
+      - name: Set JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: "${{ steps.java_version.outputs.result }}"
+          distribution: "${{ steps.java_dist.outputs.result }}"
+      ### DEV TOOLS
+
+      - name: Setup OpenTofu
+        id: setup_opentofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ env.tofu_version }}
+          tofu_wrapper: false
+
+      - name: Setup Terragrunt v${{ env.tg_version }}
+        run: |
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.tg_version }}/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+          terragrunt -v
+
+      - name: Get Bucket Name from inputs-${{ inputs.environment }}.yaml
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        id: versions_bucket
+        run: |
+          VAL=$(yq eval '.versions_bucket' inputs.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      - name: Get Java  Stack from inputs-${{ inputs.environment }}.yaml
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        id: java_stack
+        run: |
+          VAL=$(yq eval '.beanstalk.solution_stack | test("(?i:.*java.*)")'' inputs.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      - name: Get Node Stack from inputs-${{ inputs.environment }}.yaml
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        id: node_stack
+        run: |
+          VAL=$(yq eval '.beanstalk.solution_stack | test("(?i:.*node.*)")'' inputs.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      - name: Get Release Name
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        id: release_name
+        run: |
+          VAL=$(yq eval '.release.name' release.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      - name: Get Hash Value
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        id: hash_value
+        run: |
+          VAL=$(cat .values_hash_${{ steps.release_name.outputs.result }} | cut -d ' ' -f 1 | tr "[:lower:]" "[:upper:]")
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      - name: Create temp_dir
+        id: temp_dir
+        run: |
+          temp_dir=$(mktemp -d)
+          echo "result=$temp_dir" >> $GITHUB_OUTPUT
+
+      - name: Copy .env into for NodeJS
+        id: steps.node_stack.result == 'true'
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          [ -f values/${{ inputs.environment }}/.env ] && cp -p values/${{ inputs.environment }}/.env ${{ steps.temp_dir.outputs.result }}
+
+      - name: Copy Java Application Release
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release
+        if: steps.java_stack.outputs.result == 'true'
+        run: |
+          cp -p ./*.jar ${{ steps.temp_dir.outputs.result }}/app.jar
+
+      - name: Copy Application Release
+        if: ${{ steps.java_stack.outputs.result != 'true' }}
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release
+        run: |
+          cp -pr ./* ${{ steps.temp_dir.outputs.result }}
+
+      - name: Set AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ inputs.STS_ROLE_ARN }}
+          aws-region: ${{ inputs.AWS_REGION }}
+
+      ## Generate ZIP and push to bucket
+      - name: Generate ZIP and push to buket
+        working-directory: ${{ steps.temp_dir.outputs.result }}
+        id: dest_zip
+        run: |
+          tmp_dir=$(mktemp -d)
+          zip -1 -r $tmp_dir/app.zip .
+          aws s3 cp $tmp_dir/app.zip s3://${{ steps.versions_bucket.outputs.result }}/${{ steps.release_name.outputs.result }}/${{ inputs.release_version }}/${{ steps.release_name.outputs.result }}-${{ inputs.release_version }}-${{ steps.hash_value.outputs.result }}.zip
+
+      - name: Terragrunt Apply
+        id: apply
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: terragrunt --terragrunt-non-interactive apply -no-color plan.tfplan
+        continue-on-error: false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          HELM_CREDS_USER: ${{ secrets.AZURE_SERVICE_ID }}
+          HELM_CREDS_PASSWORD: ${{ secrets.AZURE_SERVICE_SECRET }}
+          HELM_EXPERIMENTAL_OCI: "1"
+          GITHUB_API_TOKEN: ${{ secrets.token }}
