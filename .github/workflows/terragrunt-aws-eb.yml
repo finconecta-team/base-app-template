@@ -172,7 +172,7 @@ jobs:
       - name: Generate release.yaml
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
-          cat > release.yaml << EOF 
+          cat > release.yaml << EOF
           release:
             name: ${{ steps.release_name.outputs.value }}
             qualifier: ${{ inputs.qualifier }}
@@ -182,6 +182,7 @@ jobs:
               githubPackages:
                 name: '${{ inputs.package_name }}'
                 type: ${{ inputs.package_type }}
+          bucket_path: ${{ steps.release_name.outputs.result }}/${{ inputs.release_version }}/${{ steps.release_name.outputs.result }}-${{ inputs.release_version }}-${{ steps.hash_value.outputs.result }}.zip
           EOF
 
       - name: Generate Global Inputs global-inputs.yaml
@@ -366,36 +367,43 @@ jobs:
           terragrunt -v
 
       - name: Get Bucket Name from inputs-${{ inputs.environment }}.yaml
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         id: versions_bucket
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
           VAL=$(yq eval '.versions_bucket' inputs.yaml)
           echo "result=$VAL" >> $GITHUB_OUTPUT
 
       - name: Get Java  Stack from inputs-${{ inputs.environment }}.yaml
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         id: java_stack
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
           VAL=$(yq eval '.beanstalk.solution_stack | test("(?i:.*java.*)")'' inputs.yaml)
           echo "result=$VAL" >> $GITHUB_OUTPUT
 
       - name: Get Node Stack from inputs-${{ inputs.environment }}.yaml
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         id: node_stack
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
           VAL=$(yq eval '.beanstalk.solution_stack | test("(?i:.*node.*)")'' inputs.yaml)
           echo "result=$VAL" >> $GITHUB_OUTPUT
 
       - name: Get Release Name
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         id: release_name
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
           VAL=$(yq eval '.release.name' release.yaml)
           echo "result=$VAL" >> $GITHUB_OUTPUT
 
-      - name: Get Hash Value
+      - name: Get Bucket Name form release.yaml
+        id: bucket_path
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          VAL=$(yq eval '.bucket_path' release.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      - name: Get Hash Value
         id: hash_value
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
           VAL=$(cat .values_hash_${{ steps.release_name.outputs.result }} | cut -d ' ' -f 1 | tr "[:lower:]" "[:upper:]")
           echo "result=$VAL" >> $GITHUB_OUTPUT
@@ -439,7 +447,7 @@ jobs:
         run: |
           tmp_dir=$(mktemp -d)
           zip -1 -r $tmp_dir/app.zip .
-          aws s3 cp $tmp_dir/app.zip s3://${{ steps.versions_bucket.outputs.result }}/${{ steps.release_name.outputs.result }}/${{ inputs.release_version }}/${{ steps.release_name.outputs.result }}-${{ inputs.release_version }}-${{ steps.hash_value.outputs.result }}.zip
+          aws s3 cp $tmp_dir/app.zip s3://${{ steps.versions_bucket.outputs.result }}/${{ steps.bucket_path.outputs.result }}
 
       - name: Terragrunt Apply
         id: apply
