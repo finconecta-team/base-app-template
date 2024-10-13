@@ -424,7 +424,7 @@ jobs:
           [ -f values/${{ inputs.environment }}/.env ] && cp -p values/${{ inputs.environment }}/.env ${{ steps.temp_dir.outputs.result }}
 
       - name: Copy Java Application Release
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release/target
         if: ${{ steps.java_stack.outputs.result == 'true' }}
         run: |
           cp -p ./*.jar ${{ steps.temp_dir.outputs.result }}/app.jar
