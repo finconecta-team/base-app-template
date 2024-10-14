@@ -189,7 +189,6 @@ jobs:
           cat > release.yaml << EOF 
           release:
             name: ${{ steps.release_name.outputs.result }}
-            qualifier: ${{ inputs.qualifier }}
             source:
               name: ${{ steps.getowner.outputs.repo_name }}
               version: ${{ inputs.release_version }}
@@ -197,6 +196,11 @@ jobs:
                 name: '${{ inputs.package_name }}'
                 type: ${{ inputs.package_type }}
           EOF
+
+      - name: Insert release.qualifier data into release.yaml
+        if: ${{ inputs.qualifier != '' }}
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: yq e -i '.release.qualifier = "${{ inputs.qualifier }}"' release.yaml
 
       - name: Generate Global Inputs global-inputs.yaml
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}
