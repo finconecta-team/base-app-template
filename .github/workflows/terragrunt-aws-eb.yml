@@ -178,7 +178,6 @@ jobs:
           cat > release.yaml << EOF
           release:
             name: ${{ steps.release_name.outputs.result }}
-            qualifier: ${{ inputs.qualifier }}
             source:
               name: ${{ steps.getowner.outputs.repo_name }}
               version: ${{ inputs.release_version }}
@@ -188,6 +187,11 @@ jobs:
           bucket_path: ${{ steps.release_name.outputs.result }}/${{ inputs.release_version }}/${{ steps.release_name.outputs.result }}-${{ inputs.release_version }}-${{ steps.hash_value.outputs.result }}.zip
           version_label: ${{ steps.release_name.outputs.result }}-${{ inputs.release_version }}-${{ steps.hash_value.outputs.result }}
           EOF
+
+      - name: Insert release.qualifier data into release.yaml
+        if: ${{ inputs.qualifier != '' }}
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: yq e -i '.release.qualifier = "${{ inputs.qualifier }}"' release.yaml
 
       - name: Generate Global Inputs global-inputs.yaml
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}
