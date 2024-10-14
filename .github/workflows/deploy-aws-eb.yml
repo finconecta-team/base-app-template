@@ -3,7 +3,7 @@
 #            On GitHub: https://github.com/cloudopsworks
 #            Distributed Under Apache v2.0 License
 #
-name: Continuous deployment to target environment
+name: Continuous deployment to target environment - Elastic Beanstalk
 
 on:
   workflow_call:
@@ -159,7 +159,7 @@ jobs:
     needs:
       - deploy-aws-eb-green
       - deploy-aws-eb-blue
-    uses: ./.github/workflows/terragrunt-aws.yml
+    uses: ./.github/workflows/terragrunt-aws-eb.yml
     if: ${{ inputs.is_release }}
     with:
       destroy: true
