@@ -163,23 +163,23 @@ jobs:
         if: ${{ inputs.target_cloud_type == 'beanstalk' || inputs.target_cloud_type == 'lambda' }}
         run: |
           mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
-          cp -pfR source/.github/values/${{ inputs.environment }}/${{ steps.release_name.outputs.result }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+          cp -pfR source/.github/values/${{ inputs.environment }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
 
       - name: Create Hash value for values bundle
         if: ${{ inputs.target_cloud_type == 'beanstalk' || inputs.target_cloud_type == 'lambda' }}
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
-          find values/${{ steps.release_name.outputs.result }} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ steps.release_name.outputs.result }}
+          find values/ -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ steps.release_name.outputs.result }}
 
       - name: Copy Values Bundle
         if: ${{ inputs.target_cloud_type == 'kubernetes' }}
         run: |
           cp -pf source/.github/vars/helm/values-${{ inputs.environment }}.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/helm-values.yaml
           mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
-          if [ -d source/.github/values/${{ inputs.environment }}/${{ steps.release_name.outputs.result }} ]; then
-            cp -pfR source/.github/values/${{ inputs.environment }}/${{ steps.release_name.outputs.result }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+          if [ -d source/.github/values/${{ inputs.environment }} ]; then
+            cp -pfR source/.github/values/${{ inputs.environment }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
           else
-            echo "No values found for source/.github/values/${{ inputs.environment }}/${{ steps.release_name.outputs.result }}, skipping..."
+            echo "No values found for source/.github/values/${{ inputs.environment }}/, skipping..."
             touch cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/.empty
           fi
 
