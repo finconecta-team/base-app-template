@@ -390,6 +390,12 @@ jobs:
         run: |
           cp -vpfR . ${{ steps.temp_dir.outputs.result }}
 
+      - name: Default Procfile for Java
+        if: ${{ steps.java_stack.outputs.result == 'true' }}
+        working-directory: ${{ steps.temp_dir.outputs.result }}
+        run: |
+          [ ! -f Procfile ] && echo 'web: java -XX:MaxRAMPercentage=65 $JAVA_OPTS -jar app.jar' > Procfile
+
       - name: Set AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
