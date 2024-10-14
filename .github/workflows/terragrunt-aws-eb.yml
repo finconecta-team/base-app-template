@@ -269,14 +269,145 @@ jobs:
             cd-${{ inputs.environment }}/**/plan.tfplan
             !cd-${{ inputs.environment }}/**/.terragrunt-cache/**/*
 
+  deployment-upload-s3:
+    needs:
+      - deployment-plan
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.deployment_name }}
+    if: ${{ ! inputs.unlock }}
+    steps:
+      - name: Install runner-tools
+        working-directory: /tmp
+        run: |
+          (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y))
+          sudo apt install -y gh jq curl zip unzip python3 python3-pip
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -qo awscliv2.zip
+          which aws || sudo ./aws/install
+          which aws && sudo ./aws/install --update
+
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          path: source
+          fetch-depth: 1
+          token: ${{ secrets.token }}
+
+      - name: Checkout Base App Template
+        uses: actions/checkout@v4
+        with:
+          repository: cloudopsworks/base-app-template
+          path: cd-${{ inputs.environment }}
+          fetch-depth: 1
+          #ref: v${{ env.base_app_version }}
+          ref: develop #TODO: Change to v${{ env.base_app_version }}
+          token: ${{ secrets.token }}
+
+      - name: Restore Pipeline Artifacts
+        uses: actions/download-artifact@v4
+        if: ${{ inputs.download_artifacts != '' }}
+        with:
+          name: ${{ inputs.download_artifacts }}
+          path: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release
+
+      - name: Restore Plan File
+        uses: actions/download-artifact@v4
+        with:
+          name: plan-file-aws-${{ inputs.target_cloud_type }}${{ inputs.qualifier != '' && '-' || '' }}${{ inputs.qualifier }}
+          path: cd-${{ inputs.environment }}
+
+      - name: Get Bucket Name from inputs-${{ inputs.environment }}.yaml
+        id: versions_bucket
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          VAL=$(yq eval '.versions_bucket' inputs.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      - name: Get Java  Stack from inputs-${{ inputs.environment }}.yaml
+        id: java_stack
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          VAL=$(yq eval '.beanstalk.solution_stack | test("(?i:.*java.*)")' inputs.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      - name: Get Node Stack from inputs-${{ inputs.environment }}.yaml
+        id: node_stack
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          VAL=$(yq eval '.beanstalk.solution_stack | test("(?i:.*node.*)")' inputs.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      - name: Get Release Name
+        id: release_name
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          VAL=$(yq eval '.release.name' release.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      - name: Get Bucket Name form release.yaml
+        id: bucket_path
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          VAL=$(yq eval '.bucket_path' release.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      - name: Create temp_dir
+        id: temp_dir
+        run: |
+          temp_dir=$(mktemp -d)
+          echo "result=$temp_dir" >> $GITHUB_OUTPUT
+
+      - name: DEBUG
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          pwd
+          ls -ltR
+
+      - name: Copy .env into for NodeJS
+        if: ${{ steps.node_stack.outputs.result == 'true' }}
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          [ -f values/${{ inputs.environment }}/.env ] && cp -p values/${{ inputs.environment }}/.env ${{ steps.temp_dir.outputs.result }}
+
+      - name: Copy Java Application Release
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release/target
+        if: ${{ steps.java_stack.outputs.result == 'true' }}
+        run: |
+          cp -p ./*.jar ${{ steps.temp_dir.outputs.result }}/app.jar
+
+      - name: Copy Application Release
+        if: ${{ steps.java_stack.outputs.result != 'true' }}
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release
+        run: |
+          cp -pr ./* ${{ steps.temp_dir.outputs.result }}
+
+      - name: Set AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ inputs.STS_ROLE_ARN }}
+          aws-region: ${{ inputs.AWS_REGION }}
+
+      ## Generate ZIP and push to bucket
+      - name: Generate ZIP and push to buket
+        working-directory: ${{ steps.temp_dir.outputs.result }}
+        id: dest_zip
+        run: |
+          tmp_dir=$(mktemp -d)
+          zip -1 -r $tmp_dir/app.zip .
+          aws s3 cp $tmp_dir/app.zip s3://${{ steps.versions_bucket.outputs.result }}/${{ steps.bucket_path.outputs.result }}
+
   deployment-apply:
     needs:
       - deployment-plan
+      - deployment-upload-s3
     runs-on: ${{ inputs.runner_set }}
     environment: ${{ inputs.deployment_name }}
     if: ${{ ! inputs.unlock }}
     steps:
       - name: Install runner-tools
+        working-directory: /tmp
         run: |
           (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
           && sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && \
@@ -286,6 +417,7 @@ jobs:
           unzip -qo awscliv2.zip
           which aws || sudo ./aws/install
           which aws && sudo ./aws/install --update
+
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
@@ -369,88 +501,6 @@ jobs:
           sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.tg_version }}/terragrunt_linux_amd64"
           sudo chmod +x /bin/terragrunt
           terragrunt -v
-
-      - name: Get Bucket Name from inputs-${{ inputs.environment }}.yaml
-        id: versions_bucket
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
-        run: |
-          VAL=$(yq eval '.versions_bucket' inputs.yaml)
-          echo "result=$VAL" >> $GITHUB_OUTPUT
-
-      - name: Get Java  Stack from inputs-${{ inputs.environment }}.yaml
-        id: java_stack
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
-        run: |
-          VAL=$(yq eval '.beanstalk.solution_stack | test("(?i:.*java.*)")' inputs.yaml)
-          echo "result=$VAL" >> $GITHUB_OUTPUT
-
-      - name: Get Node Stack from inputs-${{ inputs.environment }}.yaml
-        id: node_stack
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
-        run: |
-          VAL=$(yq eval '.beanstalk.solution_stack | test("(?i:.*node.*)")' inputs.yaml)
-          echo "result=$VAL" >> $GITHUB_OUTPUT
-
-      - name: Get Release Name
-        id: release_name
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
-        run: |
-          VAL=$(yq eval '.release.name' release.yaml)
-          echo "result=$VAL" >> $GITHUB_OUTPUT
-
-      - name: Get Bucket Name form release.yaml
-        id: bucket_path
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
-        run: |
-          VAL=$(yq eval '.bucket_path' release.yaml)
-          echo "result=$VAL" >> $GITHUB_OUTPUT
-
-      - name: Create temp_dir
-        id: temp_dir
-        run: |
-          temp_dir=$(mktemp -d)
-          echo "result=$temp_dir" >> $GITHUB_OUTPUT
-
-      - name: DEBUG
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
-        run: |
-          pwd
-          ls -ltR
-
-      - name: Copy .env into for NodeJS
-        if: ${{ steps.node_stack.outputs.result == 'true' }}
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
-        run: |
-          [ -f values/${{ inputs.environment }}/.env ] && cp -p values/${{ inputs.environment }}/.env ${{ steps.temp_dir.outputs.result }}
-
-      - name: Copy Java Application Release
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release/target
-        if: ${{ steps.java_stack.outputs.result == 'true' }}
-        run: |
-          cp -p ./*.jar ${{ steps.temp_dir.outputs.result }}/app.jar
-
-      - name: Copy Application Release
-        if: ${{ steps.java_stack.outputs.result != 'true' }}
-        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release
-        run: |
-          cp -pr ./* ${{ steps.temp_dir.outputs.result }}
-
-      - name: Set AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          role-to-assume: ${{ inputs.STS_ROLE_ARN }}
-          aws-region: ${{ inputs.AWS_REGION }}
-
-      ## Generate ZIP and push to bucket
-      - name: Generate ZIP and push to buket
-        working-directory: ${{ steps.temp_dir.outputs.result }}
-        id: dest_zip
-        run: |
-          tmp_dir=$(mktemp -d)
-          zip -1 -r $tmp_dir/app.zip .
-          aws s3 cp $tmp_dir/app.zip s3://${{ steps.versions_bucket.outputs.result }}/${{ steps.bucket_path.outputs.result }}
 
       - name: Terragrunt Apply
         id: apply
