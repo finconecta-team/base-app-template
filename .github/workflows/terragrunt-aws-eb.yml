@@ -162,7 +162,7 @@ jobs:
       - name: Copy Values Bundle
         run: |
           mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
-          cp -pfR source/.github/values/${{ inputs.environment }}/ cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+          cp -vpfr source/.github/values/${{ inputs.environment }}/. cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
 
       - name: Create Hash value for values bundle
         id: hash_value
@@ -383,12 +383,12 @@ jobs:
         if: ${{ steps.java_stack.outputs.result != 'true' }}
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release
         run: |
-          cp -pr ./* ${{ steps.temp_dir.outputs.result }}
+          cp -vpr ./* ${{ steps.temp_dir.outputs.result }}
 
       - name: Copy values/ into temp dir
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values
         run: |
-          cp -pfR ./ ${{ steps.temp_dir.outputs.result }}
+          cp -vpfR . ${{ steps.temp_dir.outputs.result }}
 
       - name: Set AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
