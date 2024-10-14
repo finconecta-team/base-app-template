@@ -8,9 +8,6 @@ name: Continuous deployment to target environment
 on:
   workflow_call:
     inputs:
-      is_release:
-        type: boolean
-        required: true
       release_version:
         required: true
         type: string
@@ -58,20 +55,7 @@ on:
       AWS_REGION:
         required: false
         type: string
-        default: ''
-      STS_ROLE_ARN:
-        required: false
-        type: string
-        default: ''
-      AZURE_RG:
-        required: false
-        type: string
-        default: ''
-      download_artifacts:
-        required: false
-        type: string
-        default: ''
-      source_artifacts:
+      qualifier:
         required: false
         type: string
         default: ''
@@ -106,13 +90,12 @@ jobs:
           echo "cloud:      ${{ inputs.target_cloud }}"
           echo "cloud_type: ${{ inputs.target_cloud_type }}"
 
-  deploy-aws-eb:
-    needs:
-      - project_data
-    uses: ./.github/workflows/deploy-aws-eb.yml
+  destroy-aws-eb:
+    uses: ./.github/workflows/terragrunt-aws.yml
     if: ${{ inputs.target_cloud == 'AWS' && ( inputs.target_cloud_type == 'eb' || inputs.target_cloud_type == 'elasticbeanstalk' ) }}
     with:
-      is_release: ${{ inputs.is_release }}
+      destroy: true
+      qualifier: ${{ inputs.qualifier }}
       release_version: ${{ inputs.release_version }}
       release_name: ${{ inputs.release_name }}
       environment: ${{ inputs.environment }}
@@ -127,16 +110,13 @@ jobs:
       BOT_USER: ${{ inputs.BOT_USER }}
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
-      STS_ROLE_ARN: ${{ inputs.STS_ROLE_ARN }}
-      download_artifacts: ${{ inputs.download_artifacts }}
     secrets: inherit
 
-  deploy-aws-eks:
-    needs:
-      - project_data
+  destroy-aws-eks:
     uses: ./.github/workflows/terragrunt-aws.yml
     if: ${{ inputs.target_cloud == 'AWS' && ( inputs.target_cloud_type == 'kubernetes' || inputs.target_cloud_type == 'eks' ) }}
     with:
+      destroy: true
       release_version: ${{ inputs.release_version }}
       release_name: ${{ inputs.release_name }}
       environment: ${{ inputs.environment }}
@@ -151,15 +131,13 @@ jobs:
       BOT_USER: ${{ inputs.BOT_USER }}
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
-      STS_ROLE_ARN: ${{ inputs.STS_ROLE_ARN }}
     secrets: inherit
 
-  deploy-aws-lambda:
-    needs:
-      - project_data
+  destroy-aws-lambda:
     uses: ./.github/workflows/terragrunt-aws.yml
     if: ${{ inputs.target_cloud == 'AWS' && inputs.target_cloud_type == 'lambda' }}
     with:
+      destroy: true
       release_version: ${{ inputs.release_version }}
       release_name: ${{ inputs.release_name }}
       environment: ${{ inputs.environment }}
@@ -174,5 +152,38 @@ jobs:
       BOT_USER: ${{ inputs.BOT_USER }}
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
-      STS_ROLE_ARN: ${{ inputs.STS_ROLE_ARN }}
     secrets: inherit
+
+  destroy-apigw-aws:
+    uses: ./.github/workflows/terragrunt-apigw-aws.yml
+    if: ${{ inputs.target_cloud == 'AWS' && inputs.apis_enabled == true }}
+    with:
+      destroy: true
+      release_version: ${{ inputs.release_version }}
+      release_name: ${{ inputs.release_name }}
+      environment: ${{ inputs.environment }}
+      package_name: ${{ inputs.package_name }}
+      package_type: ${{ inputs.package_type }}
+      deployment_name: ${{ inputs.deployment_name }}
+      target_cloud: 'aws'
+      runner_set: ${{ inputs.runner_set }}
+      BOT_USER: ${{ inputs.BOT_USER }}
+      BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
+      AWS_REGION: ${{ inputs.AWS_REGION }}
+    secrets: inherit
+
+#  destroy-apim-azure:
+#    uses: ./.github/workflows/destroy-apim-azure.yml
+#    if: ${{ inputs.target_cloud == 'AZURE' && inputs.apis_enabled == true }}
+#    with:
+#      release_version: ${{ inputs.release_version }}
+#      release_name: ${{ inputs.release_name }}
+#      environment: ${{ inputs.environment }}
+#      package_name: ${{ inputs.package_name }}
+#      package_type: ${{ inputs.package_type }}
+#      deployment_name: ${{ inputs.deployment_name }}
+#      target_cloud: 'azure'
+#      BOT_USER: ${{ inputs.BOT_USER }}
+#      BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
+#      AWS_REGION: ${{ inputs.AWS_REGION }}
+#    secrets: inherit

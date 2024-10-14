@@ -46,6 +46,23 @@ on:
       AWS_REGION:
         required: false
         type: string
+        default: ''
+      STS_ROLE_ARN:
+        required: false
+        type: string
+        default: ''
+      AZURE_RG:
+        required: false
+        type: string
+        default: ''
+      download_artifacts:
+        required: false
+        type: string
+        default: ''
+      source_artifacts:
+        required: false
+        type: string
+        default: ''
     secrets:
       token:
         required: true
@@ -93,6 +110,7 @@ jobs:
       BOT_USER: ${{ inputs.BOT_USER }}
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
+      STS_ROLE_ARN: ${{ inputs.STS_ROLE_ARN }}
     secrets: inherit
 
 #  deploy-apim-azure:

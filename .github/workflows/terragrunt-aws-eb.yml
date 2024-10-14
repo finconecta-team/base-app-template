@@ -160,33 +160,22 @@ jobs:
           cp -pf source/.github/vars/inputs-global.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/
 
       - name: Copy Values Bundle
-        if: ${{ inputs.target_cloud_type == 'beanstalk' || inputs.target_cloud_type == 'lambda' }}
         run: |
           mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
-          cp -pfR source/.github/values/${{ inputs.environment }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+          cp -vpfr source/.github/values/${{ inputs.environment }}/. cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
 
       - name: Create Hash value for values bundle
-        if: ${{ inputs.target_cloud_type == 'beanstalk' || inputs.target_cloud_type == 'lambda' }}
+        id: hash_value
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
           find values/ -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ steps.release_name.outputs.result }}
-
-      - name: Copy Values Bundle
-        if: ${{ inputs.target_cloud_type == 'kubernetes' }}
-        run: |
-          cp -pf source/.github/vars/helm/values-${{ inputs.environment }}.yaml cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/helm-values.yaml
-          mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
-          if [ -d source/.github/values/${{ inputs.environment }} ]; then
-            cp -pfR source/.github/values/${{ inputs.environment }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
-          else
-            echo "No values found for source/.github/values/${{ inputs.environment }}/, skipping..."
-            touch cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/.empty
-          fi
+          VAL=$(cat .values_hash_${{ steps.release_name.outputs.result }} | cut -d ' ' -f 1 | tr "[:lower:]" "[:upper:]" | cut -c 1-10)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
 
       - name: Generate release.yaml
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
-          cat > release.yaml << EOF 
+          cat > release.yaml << EOF
           release:
             name: ${{ steps.release_name.outputs.result }}
             source:
@@ -195,6 +184,8 @@ jobs:
               githubPackages:
                 name: '${{ inputs.package_name }}'
                 type: ${{ inputs.package_type }}
+          bucket_path: ${{ steps.release_name.outputs.result }}/${{ inputs.release_version }}/${{ steps.release_name.outputs.result }}-${{ inputs.release_version }}-${{ steps.hash_value.outputs.result }}.zip
+          version_label: ${{ steps.release_name.outputs.result }}-${{ inputs.release_version }}-${{ steps.hash_value.outputs.result }}
           EOF
 
       - name: Insert release.qualifier data into release.yaml
@@ -282,23 +273,23 @@ jobs:
             cd-${{ inputs.environment }}/**/plan.tfplan
             !cd-${{ inputs.environment }}/**/.terragrunt-cache/**/*
 
-  deployment-apply:
+  deployment-upload-s3:
     needs:
       - deployment-plan
-    runs-on: ${{ inputs.runner_set }}
+    runs-on: ubuntu-latest
     environment: ${{ inputs.deployment_name }}
     if: ${{ ! inputs.unlock }}
     steps:
       - name: Install runner-tools
+        working-directory: /tmp
         run: |
-          (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
-          && sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && \
-          sudo chmod +x /usr/bin/yq
+          (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y))
           sudo apt install -y gh jq curl zip unzip python3 python3-pip
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip -qo awscliv2.zip
           which aws || sudo ./aws/install
           which aws && sudo ./aws/install --update
+
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
@@ -321,7 +312,150 @@ jobs:
         if: ${{ inputs.download_artifacts != '' }}
         with:
           name: ${{ inputs.download_artifacts }}
-          path: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+          path: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release
+
+      - name: Restore Plan File
+        uses: actions/download-artifact@v4
+        with:
+          name: plan-file-aws-${{ inputs.target_cloud_type }}${{ inputs.qualifier != '' && '-' || '' }}${{ inputs.qualifier }}
+          path: cd-${{ inputs.environment }}
+
+      - name: Get Bucket Name from inputs-${{ inputs.environment }}.yaml
+        id: versions_bucket
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          VAL=$(yq eval '.versions_bucket' inputs.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      - name: Get Java  Stack from inputs-${{ inputs.environment }}.yaml
+        id: java_stack
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          VAL=$(yq eval '.beanstalk.solution_stack | test("(?i:.*java.*)")' inputs.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      - name: Get Node Stack from inputs-${{ inputs.environment }}.yaml
+        id: node_stack
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          VAL=$(yq eval '.beanstalk.solution_stack | test("(?i:.*node.*)")' inputs.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      - name: Get Release Name
+        id: release_name
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          VAL=$(yq eval '.release.name' release.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      - name: Get Bucket Name form release.yaml
+        id: bucket_path
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          VAL=$(yq eval '.bucket_path' release.yaml)
+          echo "result=$VAL" >> $GITHUB_OUTPUT
+
+      - name: Create temp_dir
+        id: temp_dir
+        run: |
+          temp_dir=$(mktemp -d)
+          echo "result=$temp_dir" >> $GITHUB_OUTPUT
+
+      - name: DEBUG
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          pwd
+          ls -ltR
+
+      - name: Copy .env into for NodeJS
+        if: ${{ steps.node_stack.outputs.result == 'true' }}
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
+        run: |
+          [ -f values/.env ] && cp -pf values/.env ${{ steps.temp_dir.outputs.result }}
+
+      - name: Copy Java Application Release
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release/target
+        if: ${{ steps.java_stack.outputs.result == 'true' }}
+        run: |
+          cp -p ./*.jar ${{ steps.temp_dir.outputs.result }}/app.jar
+
+      - name: Copy Application Release
+        if: ${{ steps.java_stack.outputs.result != 'true' }}
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release
+        run: |
+          cp -vpr ./* ${{ steps.temp_dir.outputs.result }}
+
+      - name: Copy values/ into temp dir
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values
+        run: |
+          cp -vpfR . ${{ steps.temp_dir.outputs.result }}
+
+      - name: Default Procfile for Java
+        if: ${{ steps.java_stack.outputs.result == 'true' }}
+        working-directory: ${{ steps.temp_dir.outputs.result }}
+        run: |
+          [ ! -f Procfile ] && echo 'web: java -XX:MaxRAMPercentage=65 $JAVA_OPTS -jar app.jar' > Procfile
+
+      - name: Set AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ inputs.STS_ROLE_ARN }}
+          aws-region: ${{ inputs.AWS_REGION }}
+
+      ## Generate ZIP and push to bucket
+      - name: Generate ZIP and push to buket
+        working-directory: ${{ steps.temp_dir.outputs.result }}
+        id: dest_zip
+        run: |
+          tmp_dir=$(mktemp -d)
+          zip -1 -r $tmp_dir/app.zip .
+          aws s3 cp $tmp_dir/app.zip s3://${{ steps.versions_bucket.outputs.result }}/${{ steps.bucket_path.outputs.result }}
+
+  deployment-apply:
+    needs:
+      - deployment-plan
+      - deployment-upload-s3
+    runs-on: ${{ inputs.runner_set }}
+    environment: ${{ inputs.deployment_name }}
+    if: ${{ ! inputs.unlock }}
+    steps:
+      - name: Install runner-tools
+        working-directory: /tmp
+        run: |
+          (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
+          && sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && \
+          sudo chmod +x /usr/bin/yq
+          sudo apt install -y gh jq curl zip unzip python3 python3-pip
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -qo awscliv2.zip
+          which aws || sudo ./aws/install
+          which aws && sudo ./aws/install --update
+
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          path: source
+          fetch-depth: 1
+          token: ${{ secrets.token }}
+
+      - name: Checkout Base App Template
+        uses: actions/checkout@v4
+        with:
+          repository: cloudopsworks/base-app-template
+          path: cd-${{ inputs.environment }}
+          fetch-depth: 1
+          #ref: v${{ env.base_app_version }}
+          ref: develop #TODO: Change to v${{ env.base_app_version }}
+          token: ${{ secrets.token }}
+
+      - name: Restore Pipeline Artifacts
+        uses: actions/download-artifact@v4
+        if: ${{ inputs.download_artifacts != '' }}
+        with:
+          name: ${{ inputs.download_artifacts }}
+          path: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release
 
       - name: Restore Plan File
         uses: actions/download-artifact@v4

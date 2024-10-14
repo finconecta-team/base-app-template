@@ -46,6 +46,19 @@ on:
       AWS_REGION:
         required: false
         type: string
+        default: ''
+      STS_ROLE_ARN:
+        required: false
+        type: string
+        default: ''
+      unlock:
+        required: false
+        type: boolean
+        default: false
+      lock_id:
+        required: false
+        type: string
+        default: ''
     secrets:
       token:
         required: true
@@ -155,8 +168,8 @@ jobs:
           environment: ${{ inputs.deployment_name }}
           release_name: ${{ steps.release_name.outputs.value }}
           default:
-            region: ${{ vars.DEPLOYMENT_AWS_REGION }}
-            sts_role_arn: ${{ vars.DEPLOYMENT_STS_ROLE_ARN }}
+            region: ${{ inputs.AWS_REGION != '' && inputs.AWS_REGION || vars.DEPLOYMENT_AWS_REGION }}
+            sts_role_arn: ${{ inputs.STS_ROLE_ARN != '' && inputs.STS_ROLE_ARN || vars.DEPLOYMENT_STS_ROLE_ARN }}
           EOF
 
       - name: Generate state_conf.yaml from vars.DEPLOYMENT_STATE_CONF
@@ -172,18 +185,24 @@ jobs:
         with:
           script: |
             const is_destroy = ${{ inputs.destroy }};
+            const is_unlock = ${{ inputs.unlock }};
             if (is_destroy) {
-              core.setOutput('value', 'plan -destroy')
+              core.setOutput('value', 'plan -destroy -no-color -input=false')
               console.log('destroy');
             } else {
-              core.setOutput('value', 'plan')
-              console.log('apply');
+              if (is_unlock) {
+                core.setOutput('value', 'force-unlock -force ${{ inputs.lock_id }}')
+                console.log('unlock');
+              } else {
+                core.setOutput('value', 'plan -no-color -input=false')
+                console.log('apply');
+              }
             }
 
       - name: Terragrunt Plan
         id: plan
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
-        run: terragrunt --terragrunt-non-interactive ${{ steps.plan_action.outputs.value }} -no-color -input=false
+        run: terragrunt --terragrunt-non-interactive ${{ steps.plan_action.outputs.value }}
         continue-on-error: false
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -192,6 +211,7 @@ jobs:
 
       - name: Terragrunt Plan to JSON
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
+        if: ${{ ! inputs.unlock }}
         run: terragrunt --terragrunt-non-interactive show -json plan.tfplan > tfplan.json
         continue-on-error: true
         env:
@@ -201,10 +221,12 @@ jobs:
 
       - name: TF Summarize of JSON file
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/apigw
+        if: ${{ ! inputs.unlock }}
         run: tf-summarize tfplan.json
 
       - name: Save Plan File
         uses: actions/upload-artifact@v4
+        if: ${{ ! inputs.unlock }}
         with:
           name: plan-file-aws-apigw
           retention-days: 1
@@ -219,6 +241,7 @@ jobs:
       - deployment-plan
     runs-on: ${{ inputs.runner_set }}
     environment: ${{ inputs.deployment_name }}
+    if: ${{ ! inputs.unlock }}
     steps:
       - name: Checkout Base App Template
         uses: actions/checkout@v4
