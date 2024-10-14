@@ -169,7 +169,7 @@ jobs:
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
           find values/${{ steps.release_name.outputs.result }} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum > .values_hash_${{ steps.release_name.outputs.result }}
-          VAL=$(cat .values_hash_${{ steps.release_name.outputs.result }} | cut -d ' ' -f 1 | tr "[:lower:]" "[:upper:]")
+          VAL=$(cat .values_hash_${{ steps.release_name.outputs.result }} | cut -d ' ' -f 1 | tr "[:lower:]" "[:upper:]" | cut -c 1-10)
           echo "result=$VAL" >> $GITHUB_OUTPUT
 
       - name: Generate release.yaml
