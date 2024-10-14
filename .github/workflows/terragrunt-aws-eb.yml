@@ -162,7 +162,7 @@ jobs:
       - name: Copy Values Bundle
         run: |
           mkdir -p cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
-          cp -pfR source/.github/values/${{ inputs.environment }} cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
+          cp -pfR source/.github/values/${{ inputs.environment }}/ cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values/
 
       - name: Create Hash value for values bundle
         id: hash_value
@@ -371,7 +371,7 @@ jobs:
         if: ${{ steps.node_stack.outputs.result == 'true' }}
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
         run: |
-          [ -f values/${{ inputs.environment }}/.env ] && cp -p values/${{ inputs.environment }}/.env ${{ steps.temp_dir.outputs.result }}
+          [ -f values/.env ] && cp -pf values/.env ${{ steps.temp_dir.outputs.result }}
 
       - name: Copy Java Application Release
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release/target
@@ -384,6 +384,11 @@ jobs:
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release
         run: |
           cp -pr ./* ${{ steps.temp_dir.outputs.result }}
+
+      - name: Copy values/ into temp dir
+        working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/values
+        run: |
+          cp -pfR ./ ${{ steps.temp_dir.outputs.result }}
 
       - name: Set AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
