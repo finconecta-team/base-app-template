@@ -371,7 +371,7 @@ jobs:
         working-directory: ${{ steps.temp_dir.outputs.result }}
         if: ${{ steps.node_stack.outputs.result == 'true' }}
         run: |
-          tar -xvf cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release/*.tar 
+          tar -xvf ${{ github.workspace }}/cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release/*.tar 
 
       - name: Copy .env into for NodeJS
         if: ${{ steps.node_stack.outputs.result == 'true' }}
