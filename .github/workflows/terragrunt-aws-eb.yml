@@ -371,7 +371,7 @@ jobs:
         working-directory: ${{ steps.temp_dir.outputs.result }}
         if: ${{ steps.node_stack.outputs.result == 'true' }}
         run: |
-          tar -xvf ${{ github.workspace }}/cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release/*.tar 
+          tar -xf ${{ github.workspace }}/cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release/*.tar 
 
       - name: Copy .env into for NodeJS
         if: ${{ steps.node_stack.outputs.result == 'true' }}
@@ -416,7 +416,7 @@ jobs:
         id: dest_zip
         run: |
           tmp_dir=$(mktemp -d)
-          zip -1 -r $tmp_dir/app.zip .
+          zip -1 -q -r $tmp_dir/app.zip .
           aws s3 cp $tmp_dir/app.zip s3://${{ steps.versions_bucket.outputs.result }}/${{ steps.bucket_path.outputs.result }}
 
   deployment-apply:
