@@ -416,7 +416,7 @@ jobs:
         id: dest_zip
         run: |
           tmp_dir=$(mktemp -d)
-          zip -1 -q -r $tmp_dir/app.zip .
+          zip -1 -q -y -r $tmp_dir/app.zip .
           aws s3 cp $tmp_dir/app.zip s3://${{ steps.versions_bucket.outputs.result }}/${{ steps.bucket_path.outputs.result }}
 
   deployment-apply:
