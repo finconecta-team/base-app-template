@@ -266,6 +266,7 @@ jobs:
           name: plan-file-aws-${{ inputs.target_cloud_type }}${{ inputs.qualifier != '' && '-' || '' }}${{ inputs.qualifier }}
           retention-days: 1
           include-hidden-files: true
+          overwrite: true
           path: |
             cd-${{ inputs.environment }}/**/values/**/*
             cd-${{ inputs.environment }}/**/.values_hash_*
@@ -278,7 +279,7 @@ jobs:
       - deployment-plan
     runs-on: ubuntu-latest
     environment: ${{ inputs.deployment_name }}
-    if: ${{ ! inputs.unlock }}
+    if: ${{ (! inputs.unlock) && (! inputs.destroy) }}
     steps:
       - name: Install runner-tools
         working-directory: /tmp
