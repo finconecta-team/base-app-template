@@ -109,3 +109,6 @@ dist
 # Tronador accelerator
 .tronador
 tronador/
+
+# Apple
+.DS_Store
