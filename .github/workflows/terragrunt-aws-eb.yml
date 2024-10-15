@@ -367,6 +367,12 @@ jobs:
           pwd
           ls -ltR
 
+      - name: Copy NodeJS Application Release
+        working-directory: ${{ steps.temp_dir.outputs.result }}
+        if: ${{ steps.node_stack.outputs.result == 'true' }}
+        run: |
+          tar -xvf cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release/*.tar 
+
       - name: Copy .env into for NodeJS
         if: ${{ steps.node_stack.outputs.result == 'true' }}
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}
@@ -380,7 +386,7 @@ jobs:
           cp -p ./*.jar ${{ steps.temp_dir.outputs.result }}/app.jar
 
       - name: Copy Application Release
-        if: ${{ steps.java_stack.outputs.result != 'true' }}
+        if: ${{ steps.java_stack.outputs.result != 'true' && steps.node_stack.outputs.result != 'true' }}
         working-directory: cd-${{ inputs.environment }}/${{ inputs.target_cloud }}/${{ inputs.target_cloud_type }}/release
         run: |
           cp -vpr ./* ${{ steps.temp_dir.outputs.result }}
