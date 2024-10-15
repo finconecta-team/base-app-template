@@ -91,7 +91,7 @@ jobs:
           echo "cloud_type: ${{ inputs.target_cloud_type }}"
 
   destroy-aws-eb:
-    uses: ./.github/workflows/terragrunt-aws.yml
+    uses: ./.github/workflows/terragrunt-aws-eb.yml
     if: ${{ inputs.target_cloud == 'AWS' && ( inputs.target_cloud_type == 'eb' || inputs.target_cloud_type == 'elasticbeanstalk' ) }}
     with:
       destroy: true
