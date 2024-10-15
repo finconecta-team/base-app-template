@@ -426,7 +426,7 @@ jobs:
       - deployment-upload-s3
     runs-on: ${{ inputs.runner_set }}
     environment: ${{ inputs.deployment_name }}
-    if: ${{ ! inputs.unlock }}
+    if: ${{ ! cancelled() && ! inputs.unlock }}
     steps:
       - name: Install runner-tools
         working-directory: /tmp
