@@ -3,7 +3,7 @@
 #            On GitHub: https://github.com/cloudopsworks
 #            Distributed Under Apache v2.0 License
 #
-name: Continuous deployment to target environment
+name: IAC Unlock Environment
 
 on:
   workflow_call:
@@ -58,6 +58,15 @@ on:
       AWS_REGION:
         required: false
         type: string
+        default: ''
+      STS_ROLE_ARN:
+        required: false
+        type: string
+        default: ''
+      AZURE_RG:
+        required: false
+        type: string
+        default: ''
       qualifier:
         required: false
         type: string
@@ -114,6 +123,7 @@ jobs:
       BOT_USER: ${{ inputs.BOT_USER }}
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
+      STS_ROLE_ARN: ${{ inputs.STS_ROLE_ARN }}
     secrets: inherit
 
   unlock-aws-eks:
@@ -136,6 +146,7 @@ jobs:
       BOT_USER: ${{ inputs.BOT_USER }}
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
+      STS_ROLE_ARN: ${{ inputs.STS_ROLE_ARN }}
     secrets: inherit
 
   unlock-aws-lambda:
@@ -158,6 +169,7 @@ jobs:
       BOT_USER: ${{ inputs.BOT_USER }}
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
+      STS_ROLE_ARN: ${{ inputs.STS_ROLE_ARN }}
     secrets: inherit
 
   unlock-apigw-aws:
@@ -177,6 +189,7 @@ jobs:
       BOT_USER: ${{ inputs.BOT_USER }}
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
+      STS_ROLE_ARN: ${{ inputs.STS_ROLE_ARN }}
     secrets: inherit
 
 #  unlock-apim-azure:
