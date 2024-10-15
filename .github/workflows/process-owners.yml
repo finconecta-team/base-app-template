@@ -741,7 +741,7 @@ jobs:
               env_env_list.push(env_env);
             }
             const env_key_ordered_list = Array.from(env_key_list).sort();
-            const env_env_ordered_list = new Set(env_env_list);
+            const env_env_ordered_list = Array.form(new Set(env_env_list));
             core.setOutput('env_list', JSON.stringify(env_key_ordered_list));
             core.setOutput('env_env_list', JSON.stringify(env_env_ordered_list));
 
