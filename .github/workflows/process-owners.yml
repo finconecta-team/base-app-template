@@ -731,14 +731,19 @@ jobs:
             }
             
             const env_key_list = []
+            const env_env_list = []
             for ( const index in deployments_list ) {
               const deploy = deployments_list[index];
               const env_name = deploy.name;
               const env_key = deploy.key;
+              const env_env = deploy.env;
               env_key_list.push(env_key);
+              env_env_list.push(env_env);
             }
-            const env_key_ordered_list =Array.from(env_key_list).sort();
+            const env_key_ordered_list = Array.from(env_key_list).sort();
+            const env_env_ordered_list = Array.from(new Set(env_env_list));
             core.setOutput('env_list', JSON.stringify(env_key_ordered_list));
+            core.setOutput('env_env_list', JSON.stringify(env_env_ordered_list));
 
       # Modify deploy YML wit yq command in order to insert the output from terragrunt_folders script
       # into the deploy.yml file on the yaml address: on.workflow_dispatch.inputs.working_directory.options
@@ -756,6 +761,12 @@ jobs:
         with:
           cmd: yq -i '.on.workflow_dispatch.inputs.destroyedDeploymentName.options = ${{ steps.envs.outputs.env_list }}' .github/workflows/environment-destroy.yml
 
+      - name: Modify environment-destroy.yml with env_env_list
+        if: ${{ steps.repo_type.outputs.result == 'sourcecode' }}
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -i '.on.workflow_dispatch.inputs.environment.options = ${{ steps.envs.outputs.env_env_list }}' .github/workflows/environment-destroy.yml
+
       # Modify deploy YML wit yq command in order to insert the output from terragrunt_folders script
       # into the deploy.yml file on the yaml address: on.workflow_dispatch.inputs.working_directory.options
       - name: Modify environment-unlock.yml with env_list
@@ -763,6 +774,12 @@ jobs:
         uses: mikefarah/yq@master
         with:
           cmd: yq -i '.on.workflow_dispatch.inputs.unlockDeploymentName.options = ${{ steps.envs.outputs.env_list }}' .github/workflows/environment-unlock.yml
+
+      - name: Modify environment-destroy.yml with env_env_list
+        if: ${{ steps.repo_type.outputs.result == 'sourcecode' }}
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -i '.on.workflow_dispatch.inputs.environment.options = ${{ steps.envs.outputs.env_env_list }}' .github/workflows/environment-unlock.yml
 
       # Push the change to the repository using plain git commands
       - name: Push Deploy Workflow

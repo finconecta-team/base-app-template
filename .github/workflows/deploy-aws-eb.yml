@@ -165,11 +165,11 @@ jobs:
       destroy: true
       qualifier: 'green'
       release_version: ${{ inputs.release_version }}
-      release_name: ${{ inputs.release_name }}_green
+      release_name: ${{ inputs.release_name }}
       environment: ${{ inputs.environment }}
       package_name: ${{ inputs.package_name }}
       package_type: ${{ inputs.package_type }}
-      deployment_name: ${{ inputs.deployment_name }}_green
+      deployment_name: ${{ inputs.deployment_name }}
       target_cloud: 'aws'
       target_cloud_type: 'beanstalk'
       runner_set: ${{ inputs.runner_set }}
