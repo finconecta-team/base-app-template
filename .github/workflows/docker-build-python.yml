@@ -3,7 +3,7 @@
 #            On GitHub: https://github.com/cloudopsworks
 #            Distributed Under Apache v2.0 License
 #
-name: Docker Build Workflow - NodeJS/Nginx Image
+name: Docker Build Workflow - Python Image
 on:
   workflow_call:
     inputs:
@@ -25,25 +25,18 @@ on:
       docker_args:
         required: true
         type: string
-      front_end:
-        required: true
-        type: boolean
-      node_version:
+      python_version:
         required: true
         type: string
-      node_dist:
+      python_dist:
         required: true
         type: string
-      node_image_variant:
+      python_image_variant:
         required: true
         type: string
       custom_run_command:
         required: false
         type: string
-      node_build_dir:
-        required: false
-        type: string
-        default: "./build"
       DOCKER_REGISTRY_ADDRESS:
         required: true
         type: string
@@ -105,62 +98,32 @@ jobs:
           merge-multiple: true
           pattern: all_artifacts
 
-      - name: Uncompress Artifacts
-        if: ${{ ! inputs.front_end }}
-        run: |
-          if [ -f node_artifacts.tar ]; then
-            tar -xf node_artifacts.tar
-            rm node_artifacts.tar
-          else
-            echo "WARNING! No artifacts found."
-          fi
-
-      # Download Artifacts from previous jobs
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          merge-multiple: true
-          pattern: node_build_artifact
-          path: build
-
       # Copy Dockerfile from blueprint to current dir
-      - name: Copy Dockerfile Front End
-        if: inputs.front_end
+      - name: Copy Dockerfile Python
         run: |
-          cp blueprint/docker/frontend/* .
-          cp blueprint/docker/frontend/.dockerignore .
+          cp blueprint/docker/python/* .
+          cp blueprint/docker/python/.dockerignore .
 
-      # Copy Dockerfile from blueprint to current dir
-      - name: Copy Dockerfile NodeJS Server
-        if: inputs.front_end == false
+      # for Python version is set by parameter, defaults to 3.12
+      - name: Set output with Python Version
+        id: python_version_image_name
         run: |
-          cp blueprint/docker/node/* .
-          cp blueprint/docker/node/.dockerignore .
-
-      # for non front end projects nodejs version is set by parameter, defaults to 20
-      - name: Set output with node Version
-        if: inputs.front_end == false
-        id: node_version_image_name
-        run: |
-          if [ "${{ inputs.node_version }}" != "" ] ; then
-            case "${{ inputs.node_image_variant }}" in
+          if [ "${{ inputs.python_version }}" != "" ] ; then
+            case "${{ inputs.python_image_variant }}" in
               alpine*)
-                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+                echo "result=IMAGE_NAME=python:${{ inputs.python_version }}-${{ inputs.python_image_variant }}" >> $GITHUB_OUTPUT
                 ;;
               bookworn*)
-                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+                echo "result=IMAGE_NAME=python:${{ inputs.python_version }}-${{ inputs.python_image_variant }}" >> $GITHUB_OUTPUT
                 ;;
               bullseye*)
-                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+                echo "result=IMAGE_NAME=python:${{ inputs.python_version }}-${{ inputs.python_image_variant }}" >> $GITHUB_OUTPUT
                 ;;
-              current*)
-                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
-                ;;
-              slim)
-                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}-${{ inputs.node_image_variant }}" >> $GITHUB_OUTPUT
+              slim*)
+                echo "result=IMAGE_NAME=python:${{ inputs.python_version }}-${{ inputs.python_image_variant }}" >> $GITHUB_OUTPUT
                 ;;
               *)
-                echo "result=IMAGE_NAME=node:${{ inputs.node_version }}" >> $GITHUB_OUTPUT
+                echo "result=IMAGE_NAME=python:${{ inputs.python_version }}" >> $GITHUB_OUTPUT
                 ;;
             esac
           fi
@@ -218,8 +181,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: |
-            BUILD_DIR=${{ inputs.node_build_dir }}
-            ${{ steps.node_version_image_name.outputs.result }}
+            ${{ steps.python_version_image_name.outputs.result }}
             ${{ inputs.docker_args }}
           push: false
           context: .
@@ -236,8 +198,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           build-args: |
-            BUILD_DIR=${{ inputs.node_build_dir }}
-            ${{ steps.node_version_image_name.outputs.result }}
+            ${{ steps.python_version_image_name.outputs.result }}
             ${{ inputs.docker_args }}
           push: false
           context: .
