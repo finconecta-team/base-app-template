@@ -2,7 +2,9 @@
 #            On GitHub: https://github.com/cloudopsworks
 #            Distributed Under Apache v2.0 License
 #
-ARG IMAGE_NAME=node:18-alpine
+ARG IMAGE_NAME=python:3.12-slim
+ARG PYTHON_OPTS=""
+ARG APM_OPTS=""
 
 FROM $IMAGE_NAME AS base
 
@@ -15,6 +17,7 @@ ARG GROUP_NAME=webapp
 USER root
 
 # Copy the application configuarion as per the application
+# Build process must ensure output jar is unique for each build
 COPY . /app/webapp/
 
 # Stage 2: Customized configuation injection occurs at command line
@@ -26,12 +29,14 @@ WORKDIR /app
 FROM customized AS final
 
 RUN addgroup --gid $GROUP_ID --system $GROUP_NAME \
- && adduser  --uid $USER_ID --system --ingroup $GROUP_NAME --home /app/webapp $USER_NAME
+ && adduser  --uid $USER_ID --system --ingroup $GROUP_NAME --home /app/webapp $USER_NAME \
 # Run chown regardess of the previous step
 RUN chown -R $USER_NAME:$GROUP_NAME /app/webapp/
 
 COPY ./startup.sh /app/webapp/
 RUN chmod +x /app/webapp/startup.sh
+ENV PYTHON_OPTS=${PYTHON_OPTS}
+ENV APM_OPTS=${APM_OPTS}
 
 USER $USER_NAME
 

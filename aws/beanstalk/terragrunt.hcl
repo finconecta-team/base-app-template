@@ -1,5 +1,5 @@
 ##
-# (c) 2022-2024 - Cloud Ops Works LLC - https://cloudops.works/
+# (c) 2024 - Cloud Ops Works LLC - https://cloudops.works/
 #            On GitHub: https://github.com/cloudopsworks
 #            Distributed Under Apache v2.0 License
 #
@@ -16,7 +16,7 @@ include {
 }
 
 terraform {
-  source = "github.com/cloudopsworks/terraform-module-aws-elasticbeanstalk-deploy.git//?ref=master"
+  source = "github.com/cloudopsworks/terraform-module-aws-elasticbeanstalk-deploy.git//?ref=v5"
 }
 
 inputs = {
@@ -37,6 +37,8 @@ inputs = {
   api_gateway      = local.local_vars.api_gateway
   alarms           = local.local_vars.alarms
   release          = local.release_vars.release
+  bucket_path      = local.release_vars.bucket_path
+  version_label    = local.release_vars.version_label
   absolute_path    = get_terragrunt_dir()
   extra_tags       = try(local.local_vars.tags, {})
 }

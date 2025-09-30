@@ -1,5 +1,5 @@
 ##
-# (c) 2022-2024 - Cloud Ops Works LLC - https://cloudops.works/
+# (c) 2024 - Cloud Ops Works LLC - https://cloudops.works/
 #            On GitHub: https://github.com/cloudopsworks
 #            Distributed Under Apache v2.0 License
 #
@@ -112,7 +112,7 @@ jobs:
       - name: Get Preview Domain
         id: preview_domain
         run: |
-          VAL=$(yq e '.cd.preview.domain' source/.github/cloudopsworks-ci.yaml)
+          VAL=$(yq e '.preview.domain' source/.github/vars/inputs-global.yaml)
           echo "result=$VAL" >> $GITHUB_OUTPUT
 
       - name: Terraform Plan prettifier
@@ -259,6 +259,7 @@ jobs:
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip -qo awscliv2.zip
           sudo ./aws/install
+
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
@@ -294,13 +295,13 @@ jobs:
       - name: Get pipeline node version
         id: node_version
         run: |
-          VAL=$(yq eval '.build.node.version // "20"' ./source/.github/cloudopsworks-ci.yaml)
+          VAL=$(yq eval '.node.version // "20"' ./source/.github/vars/inputs-global.yaml)
           echo "result=$VAL" >> $GITHUB_OUTPUT
       # Get pipeline conf node dist
       - name: Get pipeline node dist
         id: node_dist
         run: |
-          VAL=$(yq eval '.build.node.dist // "adopt"' ./source/.github/cloudopsworks-ci.yaml)
+          VAL=$(yq eval '.node.dist // "adopt"' ./source/.github/vars/inputs-global.yaml)
           echo "result=$VAL" >> $GITHUB_OUTPUT
       # Setup Node JS for builds with version provided
       - name: Set Node Version
@@ -313,13 +314,13 @@ jobs:
       - name: Get pipeline Java version
         id: java_version
         run: |
-          VAL=$(yq e '.build.java.version // "17"' ./source/.github/cloudopsworks-ci.yaml)
+          VAL=$(yq e '.java.version // "17"' ./source/.github/vars/inputs-global.yaml)
           echo "result=$VAL" >> $GITHUB_OUTPUT
       # Get pipeline conf java dist
       - name: Get pipeline Java dist
         id: java_dist
         run: |
-          VAL=$(yq e '.build.java.dist // "adopt"' ./source/.github/cloudopsworks-ci.yaml)
+          VAL=$(yq e '.java.dist // "adopt"' ./source/.github/vars/inputs-global.yaml)
           echo "result=$VAL" >> $GITHUB_OUTPUT
       # Setup Java JDK for builds
       - name: Set JDK

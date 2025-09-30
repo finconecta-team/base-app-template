@@ -1,5 +1,5 @@
 ##
-# (c) 2022-2024 - Cloud Ops Works LLC - https://cloudops.works/
+# (c) 2024 - Cloud Ops Works LLC - https://cloudops.works/
 #            On GitHub: https://github.com/cloudopsworks
 #            Distributed Under Apache v2.0 License
 #
@@ -33,8 +33,6 @@ on:
         value: ${{ jobs.data.outputs.apisEnabled }}
       isAutomatic:
         value: ${{ jobs.data.outputs.isAutomatic }}
-      deliveryPush:
-        value: ${{ jobs.data.outputs.deliveryPush }}
       dockerRegistry:
         value: ${{ jobs.data.outputs.dockerRegistry }}
       helmRegistry:
@@ -43,6 +41,8 @@ on:
         value: ${{ jobs.data.outputs.awsRegion }}
       awsStsRoleArn:
         value: ${{ jobs.data.outputs.awsStsRoleArn }}
+      azureResourceGroup:
+        value: ${{ jobs.data.outputs.azureResourceGroup }}
       runnerSet:
         value: ${{ jobs.data.outputs.runnerSet }}
       isLibrary:
@@ -62,11 +62,11 @@ jobs:
       cloudType: ${{ steps.cloud_type.outputs.result }}
       apisEnabled: ${{ steps.apis_enabled.outputs.result }}
       isAutomatic: ${{ steps.is_automatic.outputs.result }}
-      deliveryPush: ${{ steps.workspace.outputs.deliveryPush }}
-      dockerRegistry: ${{ steps.workspace.outputs.dockerRegistry }}
-      helmRegistry: ${{ steps.workspace.outputs.helmRegistry }}
-      awsRegion: ${{ steps.workspace.outputs.awsRegion }}
-      awsStsRoleArn: ${{ steps.workspace.outputs.awsStsRoleArn }}
+      dockerRegistry: ${{ steps.docker_registry.outputs.result }}
+      helmRegistry: ${{ steps.helm_values.outputs.helmRegistry }}
+      awsRegion: ${{ steps.aws_region.outputs.result }}
+      awsStsRoleArn: ${{ steps.aws_sts_role_arn.outputs.result }}
+      azureResourceGroup: ${{ steps.azure_rg.outputs.result }}
       runnerSet: ${{ steps.runner_set_env.outputs.result != '' && steps.runner_set_env.outputs.result || steps.runner_set.outputs.result }}
       isLibrary: ${{ steps.is_library.outputs.result }}
 
@@ -85,26 +85,26 @@ jobs:
         with:
           cmd: yq -o=json -I=0 '.cd.deployments' .github/cloudopsworks-ci.yaml
           
-      # Get the cloud entry from .github/cloudopsworks-ci.yaml as plain text
+      # Get the cloud entry from .github/vars/inputs-global.yaml as plain text
       - name: Get Cloud Entry
         id: cloud
         uses: mikefarah/yq@master
         with:
-          cmd: yq e '.cd.cloud' .github/cloudopsworks-ci.yaml | tr '[:lower:]' '[:upper:]'
+          cmd: yq e '.cloud' .github/vars/inputs-global.yaml | tr '[:lower:]' '[:upper:]'
 
-      # Get the cloud type from .github/cloudopsworks-ci.yaml as plain text
+      # Get the cloud type from github/vars/inputs-global.yaml as plain text
       - name: Get Cloud Type
         id: cloud_type
         uses: mikefarah/yq@master
         with:
-          cmd: yq e '.cd.cloud_type' .github/cloudopsworks-ci.yaml
+          cmd: yq e '.cloud_type' .github/vars/inputs-global.yaml
 
       # Get the apis enabled from .github/cloudopsworks-ci.yaml as plain text
       - name: Get APIs Enabled
         id: apis_enabled
         uses: mikefarah/yq@master
         with:
-          cmd: yq e '.cd.apis.enabled // false' .github/cloudopsworks-ci.yaml
+          cmd: yq e '.apis.enabled // false' .github/vars/inputs-global.yaml
 
       # Get the automatic setting from .github/cloudopsworks-ci.yaml as plain text
       - name: Get Automatic Setting
@@ -112,13 +112,6 @@ jobs:
         uses: mikefarah/yq@master
         with:
           cmd: yq e '.cd.automatic // false' .github/cloudopsworks-ci.yaml
-
-      # Get default Legacy delivery Push Value
-      - name: Legacy Delivery Push Value
-        uses: mikefarah/yq@v4.33.3
-        id: default_delivery_push
-        with:
-          cmd: yq e -I=0 '.cd.legacyDeliveryPush' .github/cloudopsworks-ci.yaml
 
       # Set the appropriate workspace from what is configured from the deploy_conf step
       # Result is stored as JSON with the format found on the cd.deployments section on .github/cloudopsworks-ci.yaml
@@ -140,10 +133,7 @@ jobs:
             var isEnabled = true;
             var hasQualifier = false;
             var deploymentName = '';
-            var deliveryPush = ${{ steps.default_delivery_push.outputs.result }};
-            if ( deliveryPush == null ) {
-              deliveryPush = false;
-            }
+            
             if ( branch.startsWith('support') ) {
               const oneMatch = deployments.support.find( ({ match }) => branch.match(new RegExp('support/'+match,'g')) );
               environment = oneMatch.env;
@@ -156,9 +146,6 @@ jobs:
                 targetName = deployments.test.targetName;
               }
               deploymentName = `test/${environment}`;
-              if ( 'legacyDeliveryPush' in deployments.test ) {
-                deliveryPush = deployments.test.legacyDeliveryPush;
-              }
             } else if ( branch === 'develop' ) {
               isEnabled = (deployments.develop['enabled'] == null ? true : (deployments.develop['enabled'] === 'true'));
               environment = deployments.develop.env;
@@ -166,9 +153,6 @@ jobs:
                 targetName = deployments.develop.targetName;
               }
               deploymentName = `develop/${environment}`;
-              if ( 'legacyDeliveryPush' in deployments.develop ) {
-                deliveryPush = deployments.develop.legacyDeliveryPush;
-              }
             } else {
               // This semver structure is obtained as per specification https://semver.org/ & https://regex101.com/r/vkijKf/1/
               semver = branch.match(/^v(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?/);
@@ -187,9 +171,6 @@ jobs:
                     targetName = deployments.prerelease.targets[metasuffix.groups.data].targetName;
                   }
                   deploymentName = `prerelease/${buildmeta}/${environment}`;
-                  if ( 'legacyDeliveryPush' in deployments.prelease.targets[metasuffix.groups.data] ) {
-                    deliveryPush = deployments.prelease.targets[metasuffix.groups.data].legacyDeliveryPush;
-                  }
                 } else if ( pre != null ) {
                   isEnabled = (deployments.prerelease['enabled'] == null ? true : (deployments.prerelease['enabled'] === 'true'));
                   // Regular expression to match following semver pattern: v1.0.2-alpha.10-uoiretu834u
@@ -199,9 +180,6 @@ jobs:
                     targetName = deployments.prerelease.targetName;
                   }
                   deploymentName = `prerelease/${environment}`;
-                  if ( 'legacyDeliveryPush' in deployments.prelease ) {
-                    deliveryPush = deployments.prelease.legacyDeliveryPush;
-                  }
                 } else if ( buildmeta != null ) {
                   const metasuffix = buildmeta.match(/deploy-(?<data>.*)/);
                   isRelease = true;
@@ -211,9 +189,6 @@ jobs:
                     targetName = deployments.release.targets[metasuffix.groups.data].targetName;
                   }
                   deploymentName = `release/${buildmeta}/${environment}`;
-                  if ( 'legacyDeliveryPush' in deployments.release.targets[metasuffix.groups.data] ) {
-                    deliveryPush = deployments.release.targets[metasuffix.groups.data].legacyDeliveryPush;
-                  }
                 } else {
                   isRelease = true;
                   environment = deployments.release.env;
@@ -221,9 +196,6 @@ jobs:
                     targetName = deployments.release.targetName;
                   }
                   deploymentName = `release/${environment}`;
-                  if ( 'legacyDeliveryPush' in deployments.release ) {
-                    deliveryPush = deployments.release.legacyDeliveryPush;
-                  }
                 }
               } else if ( branch === 'master' || branch === 'main' ) {
                 isRelease = true;
@@ -232,85 +204,11 @@ jobs:
                   targetName = deployments.release.targetName;
                 }
                 deploymentName = `release/${environment}`;
-                if ( 'legacyDeliveryPush' in deployments.release ) {
-                  deliveryPush = deployments.release.legacyDeliveryPush;
-                }
               } else {
                 core.setFailed('Branch not supported');
               }
             }
             
-            // Check some conditions in order to report back proper variables:
-            // HELM_REGISTRY_ADDRESS
-            // DOCKER_REGISTRY_ADDRESS
-            // BUILD_AWS_REGION
-            // BUILD_AWS_STS_ROLE_ARN
-            // 
-            const targetCloud = '${{ steps.cloud.outputs.result }}';
-            // get helm registry variable from org
-            const helm_registry_var = `HELM_REGISTRY_ADDRESS_${environment.toUpperCase()}`;
-            const {data : helm} = await github.rest.actions.getOrgVariable({
-              org: context.repo.owner,
-              name: helm_registry_var
-            }).then((response) => {
-              return response;
-            }).catch((error) => {
-              core.error(`Error getting ${helm_registry_var} from org variables`);
-              core.error(error);
-              return {};
-            });
-            core.info(`${helm_registry_var} == ${JSON.stringify(helm)}`);
-            const helm_registry = helm ? helm.value : '';
-            core.info(`${helm_registry_var} == ${helm_registry}`);
-            
-            // get registry variable from org
-            const registry_var = `DOCKER_REGISTRY_ADDRESS_${environment.toUpperCase()}`;
-            const {data : registry} = await github.rest.actions.getOrgVariable({
-              org: context.repo.owner,
-              name: registry_var
-            }).then((response) => {
-              return response;
-            }).catch((error) => {
-              core.error(`Error getting ${registry_var} from org variables`);
-              core.error(error);
-              return {};
-            });
-            core.info(`${registry_var} == ${JSON.stringify(registry)}`);
-            const docker_registry = registry ? registry.value : ''; 
-            core.info(`${registry_var} == ${docker_registry}`);
-            
-            // get BUILD_AWS_REGION variable from org
-            const region_var = `BUILD_AWS_REGION_${environment.toUpperCase()}`;
-            const {data : region} = await github.rest.actions.getOrgVariable({
-              org: context.repo.owner,
-              name: region_var
-            }).then((response) => {
-              return response;
-            }).catch((error) => {
-              core.error(`Error getting ${region_var} from org variables`);
-              core.error(error);
-              return {};
-            });
-            core.info(`${region_var} == ${JSON.stringify(region)}`);
-            const aws_region = region ? region.value : '';
-            core.info(`${region_var} == ${aws_region}`);
-
-            // get BUILD_AWS_STS_ROLE_ARN variable from org
-            const sts_role_var = `BUILD_AWS_STS_ROLE_ARN_${environment.toUpperCase()}`;
-            const {data : sts_role} = await github.rest.actions.getOrgVariable({
-              org: context.repo.owner,
-              name: sts_role_var
-            }).then((response) => {
-              return response;
-            }).catch((error) => {
-              core.error(`Error getting ${sts_role_var} from org variables`);
-              core.error(error);
-              return {};
-            });
-            core.info(`${sts_role_var} == ${JSON.stringify(sts_role)}`);
-            const aws_sts_role = sts_role ? sts_role.value : '';
-            core.info(`${sts_role_var} == ${aws_sts_role}`);
-
             const outputV = { 
               environment: environment, 
               isPreRelease: isPreRelease, 
@@ -318,46 +216,69 @@ jobs:
               targetName: targetName,
               isEnabled: isEnabled,
               hasQualifier: hasQualifier,
-              deploymentName: deploymentName,
-              deliveryPush: deliveryPush,
-              dockerRegistry: docker_registry,
-              helmRegistry: helm_registry,
-              awsRegion: aws_region,
-              awsStsRoleArn: aws_sts_role
+              deploymentName: deploymentName
             }; 
             core.setOutput('workspace', environment);
+            core.setOutput('workspace_upper', environment.toUpperCase());
             core.setOutput('isRelease', isRelease);
             core.setOutput('isPreRelease', isPreRelease);
             core.setOutput('targetName', targetName);
             core.setOutput('isEnabled', isEnabled);
             core.setOutput('hasQualifier', hasQualifier);
             core.setOutput('deploymentName', deploymentName);
-            core.setOutput('deliveryPush', deliveryPush);
-            core.setOutput('dockerRegistry', docker_registry);
-            core.setOutput('helmRegistry', helm_registry);
-            core.setOutput('awsRegion', aws_region);
-            core.setOutput('awsStsRoleArn', aws_sts_role);
 
             return outputV;
           github-token: ${{ secrets.token }}
 
-      - name: Get the Runner Set for this build
-        id: runner_set
-        uses: mikefarah/yq@master
-        with:
-          cmd: yq -I=0 '.cd.runner_set // "ubuntu-latest"' .github/cloudopsworks-ci.yaml
-
+      # Check the specific environment vars/input-*.yaml exists if not: hard fail
       - name: Check specific environment file exists
         id: check_env_file
         run: |
           fexist=false
           if [ ! -f .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml ]; then
             echo "File .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml does not exist"
+            exit 100
           else
             fexist=true
           fi
           echo "result=$fexist" >> $GITHUB_OUTPUT
-          
+
+      # Recover the docker_registry value from the environment file
+      - name: Get Docker Registry value if set into the ENV file
+        id: docker_registry
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -I=0 '.container_registry // ""' .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml
+
+      # Get the AWS Region value from the inputs-<environment>.yaml file
+      - name: Set the appropriate values for REGION
+        id: aws_region
+        if: steps.cloud.outputs.result == 'AWS'
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -I=0 '.aws.region // "us-east-1"' .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml
+
+      # Get the AWS STS Role ARN value from the inputs-<environment>.yaml file
+      - name: Set the appropriate values for STS Role ARN
+        id: aws_sts_role_arn
+        if: steps.cloud.outputs.result == 'AWS'
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -I=0 '.aws.sts_role_arn // ""' .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml
+
+      # Get the Azure RG value from the inputs-<environment>.yaml file
+      - name: Set the appropriate values for Azure RG
+        id: azure_rg
+        if: steps.cloud.outputs.result == 'AZURE'
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -I=0 '.azure.resource_group // "no-resource-group"' .github/vars/inputs-${{ steps.workspace.outputs.workspace }}.yaml
+
+      - name: Get the Runner Set for this build
+        id: runner_set
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq -I=0 '.runner_set // "ubuntu-latest"' .github/vars/inputs-global.yaml
 
       - name: Get the Runner Set for the environment
         if: steps.check_env_file.outputs.result == 'true'
@@ -370,4 +291,4 @@ jobs:
         id: is_library
         uses: mikefarah/yq@master
         with:
-          cmd: yq -I=0 '.build.isLibrary // "false"' .github/cloudopsworks-ci.yaml
+          cmd: yq -I=0 '.isLibrary // "false"' .github/vars/inputs-global.yaml

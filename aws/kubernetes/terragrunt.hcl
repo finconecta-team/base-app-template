@@ -1,5 +1,5 @@
 ##
-# (c) 2022-2024 - Cloud Ops Works LLC - https://cloudops.works/
+# (c) 2024 - Cloud Ops Works LLC - https://cloudops.works/
 #            On GitHub: https://github.com/cloudopsworks
 #            Distributed Under Apache v2.0 License
 #
@@ -45,7 +45,7 @@ EOF
 }
 
 terraform {
-  source = "github.com/cloudopsworks/terraform-module-aws-eks-helm-deploy.git//?ref=master"
+  source = "github.com/cloudopsworks/terraform-module-aws-eks-helm-deploy.git//?ref=v4"
 }
 
 inputs = {

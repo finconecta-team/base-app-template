@@ -1,13 +1,16 @@
 ##
-# (c) 2022-2024 - Cloud Ops Works LLC - https://cloudops.works/
+# (c) 2024 - Cloud Ops Works LLC - https://cloudops.works/
 #            On GitHub: https://github.com/cloudopsworks
 #            Distributed Under Apache v2.0 License
 #
-name: Continuous deployment to target environment
+name: Continuous deployment to target environment - Elastic Beanstalk
 
 on:
   workflow_call:
     inputs:
+      is_release:
+        type: boolean
+        required: true
       release_version:
         required: true
         type: string
@@ -34,9 +37,6 @@ on:
       target_cloud_type:
         required: true
         type: string
-      apis_enabled:
-        required: true
-        type: boolean
       runner_set:
         required: true
         type: string
@@ -55,6 +55,23 @@ on:
       AWS_REGION:
         required: false
         type: string
+        default: ''
+      STS_ROLE_ARN:
+        required: false
+        type: string
+        default: ''
+      AZURE_RG:
+        required: false
+        type: string
+        default: ''
+      download_artifacts:
+        required: false
+        type: string
+        default: ''
+      source_artifacts:
+        required: false
+        type: string
+        default: ''
     secrets:
       token:
         required: true
@@ -68,29 +85,10 @@ on:
         required: false
 
 jobs:
-  project_data:
-    runs-on: ubuntu-latest
-    outputs:
-      project_name: ${{ steps.getowner.outputs.repo_name }}
-    steps:
-      # Get the owner repo
-      - name: Get owner
-        id: getowner
-        run: |
-          repo_owner=`echo "$GITHUB_REPOSITORY" | cut -f 1 -d "/"`
-          repo_name=`echo "$GITHUB_REPOSITORY" | cut -f 2 -d "/"`
-          echo "owner=$repo_owner" >> $GITHUB_OUTPUT
-          echo "repo_name=$repo_name" >> $GITHUB_OUTPUT
-      - name: outputs
-        run: |
-          echo "cloud:      ${{ inputs.target_cloud }}"
-          echo "cloud_type: ${{ inputs.target_cloud_type }}"
-
-  destroy-aws-eb:
-    uses: ./.github/workflows/terragrunt-aws.yml
-    if: ${{ inputs.target_cloud == 'AWS' && ( inputs.target_cloud_type == 'eb' || inputs.target_cloud_type == 'elasticbeanstalk' ) }}
+  deploy-aws-eb-standard:
+    uses: ./.github/workflows/terragrunt-aws-eb.yml
+    if: ${{ ! inputs.is_release }}
     with:
-      destroy: true
       release_version: ${{ inputs.release_version }}
       release_name: ${{ inputs.release_name }}
       environment: ${{ inputs.environment }}
@@ -105,13 +103,15 @@ jobs:
       BOT_USER: ${{ inputs.BOT_USER }}
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
+      STS_ROLE_ARN: ${{ inputs.STS_ROLE_ARN }}
+      download_artifacts: ${{ inputs.download_artifacts }}
     secrets: inherit
 
-  destroy-aws-eks:
-    uses: ./.github/workflows/terragrunt-aws.yml
-    if: ${{ inputs.target_cloud == 'AWS' && ( inputs.target_cloud_type == 'kubernetes' || inputs.target_cloud_type == 'eks' ) }}
+  deploy-aws-eb-green:
+    uses: ./.github/workflows/terragrunt-aws-eb.yml
+    if: ${{ inputs.is_release }}
     with:
-      destroy: true
+      qualifier: 'green'
       release_version: ${{ inputs.release_version }}
       release_name: ${{ inputs.release_name }}
       environment: ${{ inputs.environment }}
@@ -119,20 +119,24 @@ jobs:
       package_type: ${{ inputs.package_type }}
       deployment_name: ${{ inputs.deployment_name }}
       target_cloud: 'aws'
-      target_cloud_type: 'kubernetes'
+      target_cloud_type: 'beanstalk'
       runner_set: ${{ inputs.runner_set }}
       DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
       HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
       BOT_USER: ${{ inputs.BOT_USER }}
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
+      STS_ROLE_ARN: ${{ inputs.STS_ROLE_ARN }}
+      download_artifacts: ${{ inputs.download_artifacts }}
     secrets: inherit
 
-  destroy-aws-lambda:
-    uses: ./.github/workflows/terragrunt-aws.yml
-    if: ${{ inputs.target_cloud == 'AWS' && inputs.target_cloud_type == 'lambda' }}
+  deploy-aws-eb-blue:
+    needs:
+      - deploy-aws-eb-green
+    uses: ./.github/workflows/terragrunt-aws-eb.yml
+    if: ${{ inputs.is_release }}
     with:
-      destroy: true
+      qualifier: 'a'
       release_version: ${{ inputs.release_version }}
       release_name: ${{ inputs.release_name }}
       environment: ${{ inputs.environment }}
@@ -140,20 +144,26 @@ jobs:
       package_type: ${{ inputs.package_type }}
       deployment_name: ${{ inputs.deployment_name }}
       target_cloud: 'aws'
-      target_cloud_type: 'lambda'
+      target_cloud_type: 'beanstalk'
       runner_set: ${{ inputs.runner_set }}
       DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
       HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
       BOT_USER: ${{ inputs.BOT_USER }}
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
+      STS_ROLE_ARN: ${{ inputs.STS_ROLE_ARN }}
+      download_artifacts: ${{ inputs.download_artifacts }}
     secrets: inherit
 
-  destroy-apigw-aws:
-    uses: ./.github/workflows/terragrunt-apigw-aws.yml
-    if: ${{ inputs.target_cloud == 'AWS' && inputs.apis_enabled == true }}
+  destroy-aws-eb-green:
+    needs:
+      - deploy-aws-eb-green
+      - deploy-aws-eb-blue
+    uses: ./.github/workflows/terragrunt-aws-eb.yml
+    if: ${{ inputs.is_release }}
     with:
       destroy: true
+      qualifier: 'green'
       release_version: ${{ inputs.release_version }}
       release_name: ${{ inputs.release_name }}
       environment: ${{ inputs.environment }}
@@ -161,24 +171,13 @@ jobs:
       package_type: ${{ inputs.package_type }}
       deployment_name: ${{ inputs.deployment_name }}
       target_cloud: 'aws'
+      target_cloud_type: 'beanstalk'
       runner_set: ${{ inputs.runner_set }}
+      DOCKER_REGISTRY_ADDRESS: ${{ inputs.DOCKER_REGISTRY_ADDRESS }}
+      HELM_REGISTRY_ADDRESS: ${{ inputs.HELM_REGISTRY_ADDRESS }}
       BOT_USER: ${{ inputs.BOT_USER }}
       BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
+      STS_ROLE_ARN: ${{ inputs.STS_ROLE_ARN }}
+      download_artifacts: ${{ inputs.download_artifacts }}
     secrets: inherit
-
-#  destroy-apim-azure:
-#    uses: ./.github/workflows/destroy-apim-azure.yml
-#    if: ${{ inputs.target_cloud == 'AZURE' && inputs.apis_enabled == true }}
-#    with:
-#      release_version: ${{ inputs.release_version }}
-#      release_name: ${{ inputs.release_name }}
-#      environment: ${{ inputs.environment }}
-#      package_name: ${{ inputs.package_name }}
-#      package_type: ${{ inputs.package_type }}
-#      deployment_name: ${{ inputs.deployment_name }}
-#      target_cloud: 'azure'
-#      BOT_USER: ${{ inputs.BOT_USER }}
-#      BOT_EMAIL: ${{ inputs.BOT_EMAIL }}
-#      AWS_REGION: ${{ inputs.AWS_REGION }}
-#    secrets: inherit
